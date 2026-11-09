@@ -15,10 +15,23 @@ module CoachApp
       { code: code, expires_in_seconds: ttl_seconds }
     end
 
+    # Checks a code without using it, so the coach can fill in their details next.
+    def self.check_code(phone, code)
+      with_valid_code(phone, code) { |_row| nil }
+    end
+
     # Yields only for the right code. The code is consumed in the block's transaction, so it stays
-    # usable if the block fails. A wrong code raises after the commit, because raising inside
-    # would roll back the attempt it just counted.
+    # usable if the block fails.
     def self.verify_and_consume(phone, code)
+      with_valid_code(phone, code) do |row|
+        row.update!(consumed_at: Time.current)
+        yield
+      end
+    end
+
+    # A wrong code raises after the commit, because raising inside would roll back the attempt
+    # it just counted.
+    def self.with_valid_code(phone, code)
       failure = nil
       result = PhoneVerification.transaction do
         row = scope(phone).where(consumed_at: nil).where("expires_at > ?", Time.current)
@@ -26,13 +39,13 @@ module CoachApp
         failure = check(row, code)
         next if failure
 
-        row.update!(consumed_at: Time.current)
-        yield
+        yield row
       end
       raise ApiError.new(400, failure) if failure
 
       result
     end
+    private_class_method :with_valid_code
 
     def self.check(row, code)
       return "otp expired" unless row

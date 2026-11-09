@@ -109,6 +109,86 @@ class CoachApp::SignupsControllerTest < ActionDispatch::IntegrationTest
     assert_failure :bad_request, "validation failed"
   end
 
+  # --- countries
+
+  test "countries returns the list in the envelope, with no sign-in" do
+    get "/coach/auth/countries"
+
+    assert_response :ok
+    assert_includes data, { "country" => "EG", "callingCode" => "20" }
+  end
+
+  # --- check-otp
+
+  def check_otp(**overrides)
+    post "/coach/auth/signup/check-otp", as: :json, params: { phone: LOCAL, country: "EG", code: "123456" }.merge(overrides)
+  end
+
+  test "check-otp accepts the right code without using it, and verify then accepts it" do
+    row = add_code
+    check_otp
+
+    assert_response :ok
+    assert_equal({ "success" => true, "data" => {} }, response.parsed_body)
+    assert_nil row.reload.consumed_at
+    assert_not Coach.exists?(phone: E164)
+
+    verify
+    assert_response :created
+  end
+
+  test "check-otp accepts Arabic digits" do
+    add_code
+    check_otp(code: "١٢٣٤٥٦")
+
+    assert_response :ok
+  end
+
+  test "a wrong code at check-otp counts as an attempt that verify shares" do
+    row = add_code
+    check_otp(code: "000000")
+    assert_failure :bad_request, "invalid code"
+    assert_equal 1, row.reload.attempts
+
+    verify(code: "000000")
+    assert_equal 2, row.reload.attempts
+  end
+
+  test "the fifth wrong code at check-otp locks it" do
+    add_code
+    4.times { check_otp(code: "000000") }
+    check_otp(code: "000000")
+    assert_failure :bad_request, "too many attempts"
+
+    check_otp
+    assert_failure :bad_request, "too many attempts"
+  end
+
+  test "check-otp reports an expired code" do
+    add_code(expires_at: 1.second.ago)
+    check_otp
+
+    assert_failure :bad_request, "otp expired"
+  end
+
+  test "check-otp reports a registered phone" do
+    Coach.create!(phone: E164, password_hash: "x", full_name: "Taken")
+    add_code
+    check_otp
+
+    assert_failure :conflict, "phone already registered"
+  end
+
+  test "check-otp refuses an invalid phone and bad fields" do
+    check_otp(phone: "123")
+    assert_failure :bad_request, "invalid phone"
+
+    [ { code: nil }, { code: "" }, { code: 123456 }, { phone: nil }, { country: "XX" } ].each do |fields|
+      check_otp(**fields)
+      assert_failure :bad_request, "validation failed"
+    end
+  end
+
   # --- verify
 
   test "verify creates the coach and returns the contract's fields" do

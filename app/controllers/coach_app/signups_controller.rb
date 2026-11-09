@@ -4,6 +4,10 @@ module CoachApp
       render_success(Signup.request_otp(phone: params[:phone], country: params[:country]))
     end
 
+    def check_otp
+      render_success(Signup.check_code(phone: params[:phone], country: params[:country], code: params[:code]))
+    end
+
     def verify
       data = Signup.verify(
         phone: params[:phone], country: params[:country], code: params[:code],

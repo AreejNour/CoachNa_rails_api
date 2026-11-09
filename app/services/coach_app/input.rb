@@ -32,7 +32,7 @@ module CoachApp
     end
 
     def self.country(value)
-      invalid! unless value.is_a?(String) && Phonelib.phone_data.key?(value)
+      invalid! unless value.is_a?(String) && value.match?(PhoneNumber::COUNTRY_CODE) && Phonelib.phone_data.key?(value)
       value
     end
 
