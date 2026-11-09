@@ -21,7 +21,20 @@ class SharedDbGuardTest < ActiveSupport::TestCase
   test "every resetting rake task runs the guard first" do
     Rails.application.load_tasks unless Rake::Task.task_defined?("db:schema:load")
 
-    %w[db:drop db:purge db:reset db:setup db:prepare db:schema:load db:migrate:reset db:truncate_all db:seed:replant].each do |name|
+    %w[
+      db:drop db:purge db:reset db:setup db:prepare db:schema:load db:migrate:reset db:truncate_all db:seed:replant
+      db:test:purge db:drop:_unsafe
+    ].each do |name|
+      assert_includes guarded_tasks(name), "shared_db_guard", "#{name} is not guarded"
+    end
+  end
+
+  # These don't delete data, but they create Rails' own tables in the shared database,
+  # even when there are no migrations to run.
+  test "every rake task that writes Rails' own tables runs the guard first" do
+    Rails.application.load_tasks unless Rake::Task.task_defined?("db:schema:load")
+
+    %w[db:migrate db:migrate:up db:migrate:down db:migrate:redo db:rollback db:forward db:environment:set].each do |name|
       assert_includes guarded_tasks(name), "shared_db_guard", "#{name} is not guarded"
     end
   end

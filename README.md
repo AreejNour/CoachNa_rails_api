@@ -11,9 +11,10 @@ Development uses the **same database as the Node API**, and Node's migrations cr
 Rails' usual setup commands would wipe that database, so `lib/shared_db_guard.rb` makes them refuse to run:
 
 - `db:drop`, `db:purge`, `db:reset`, `db:setup`, `db:prepare`, `db:schema:load`, `db:migrate:reset`, `db:truncate_all`, `db:seed:replant` and `db:test:purge` only run against a database named `*_test`.
+- `db:migrate`, `db:migrate:up`, `db:migrate:down`, `db:migrate:redo`, `db:rollback`, `db:forward` and `db:environment:set` follow the same rule, because they'd add Rails' own tables to the shared database even with no migrations to run.
 - `db:drop:all` and `db:purge:all` never run, because they reach every environment's database.
 
-Don't remove the guard, and don't run `bin/rails db:migrate` in development. It would add Rails' own tables to the shared database. How Rails changes tables will be decided when it first needs to.
+Don't remove the guard. How Rails changes tables will be decided when it first needs to.
 
 ## Setup
 

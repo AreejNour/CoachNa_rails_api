@@ -1,4 +1,5 @@
-# Stops Rails' resetting database tasks from touching the database shared with the Node API.
+# Stops Rails' database tasks from resetting the database shared with the Node API, or adding
+# Rails' own tables to it: db:migrate creates them even with no migrations to run.
 # See SharedDbGuard.
 
 desc "Abort unless the current database is safe to reset"
@@ -15,7 +16,8 @@ end
 
 %w[
   db:drop db:purge db:reset db:setup db:prepare db:schema:load db:migrate:reset
-  db:truncate_all db:seed:replant db:test:purge
+  db:truncate_all db:seed:replant db:test:purge db:drop:_unsafe
+  db:migrate db:migrate:up db:migrate:down db:migrate:redo db:rollback db:forward db:environment:set
 ].each { |name| Rake::Task[name].enhance([ "shared_db_guard" ]) }
 
 %w[db:drop:all db:purge:all].each { |name| Rake::Task[name].enhance([ "shared_db_guard:refuse" ]) }
