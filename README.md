@@ -30,7 +30,9 @@ cp .env.example .env
 RAILS_ENV=test bin/rails db:create db:schema:load
 ```
 
-In `.env`, set `JWT_ACCESS_SECRET` to the **same value as the Node API's**. Each backend accepts coach tokens signed by the other, and Node's document routes need that until Milestone 17.
+In `.env`, keep `LOCAL_STORAGE_DIR` pointing at the **Node API's storage folder**. Node serves coach photos to the client app, so files uploaded here must land where it reads them. Rails refuses to start storing files in development if that folder is missing.
+
+Set `JWT_ACCESS_SECRET` to the **same value as the Node API's**.
 
 ## Run and test
 

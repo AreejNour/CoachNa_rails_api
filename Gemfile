@@ -24,6 +24,9 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 
+# Document storage on S3-compatible services, the same buckets as the Node API
+gem "aws-sdk-s3", "~> 1.0", require: false
+
 # Cross-origin requests, open like the Node API (auth uses Bearer tokens, not cookies)
 gem "rack-cors"
 
