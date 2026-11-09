@@ -1,5 +1,7 @@
 ENV["RAILS_ENV"] ||= "test"
 ENV["JWT_ACCESS_SECRET"] = "test-access-secret"
+ENV["STORAGE_DRIVER"] = "local"
+ENV["LOCAL_STORAGE_DIR"] = "tmp/test-storage"
 require_relative "../config/environment"
 
 # Before rails/test_help, which can reload the schema. A DATABASE_URL in the shell overrides

@@ -30,7 +30,9 @@ cp .env.example .env
 RAILS_ENV=test bin/rails db:create db:schema:load
 ```
 
-In `.env`, set `JWT_ACCESS_SECRET` to the **same value as the Node API's**. Each backend accepts coach tokens signed by the other, and Node's document routes need that until Milestone 17.
+In `.env`, keep `LOCAL_STORAGE_DIR` pointing at the **Node API's storage folder**. Node serves coach photos to the client app, so files uploaded here must land where it reads them. Rails refuses to start storing files in development if that folder is missing.
+
+Set `JWT_ACCESS_SECRET` to the **same value as the Node API's**.
 
 ## Run and test
 
@@ -52,6 +54,15 @@ bin/dump-shared-schema
 RAILS_ENV=test bin/rails db:schema:load
 ```
 
+## Approving a coach in development
+
+The admin panel arrives in Milestones 33-34. Until then, use these commands, which refuse to run in production:
+
+```bash
+bin/rails coach_review:approve PHONE=+201001234567 COMMISSION=15
+bin/rails coach_review:reject PHONE=+201001234567 REASON="Your certificate photo is too blurry to read."
+```
+
 ## Coach API
 
 Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error": "..." }`.
@@ -68,5 +79,10 @@ Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error"
 | `POST /coach/auth/logout` | Revoke a refresh token |
 | `GET /coach/me` | The signed-in coach |
 | `PATCH /coach/profile` | Edit profile details |
+| `GET /coach/profile/status` | Review status, what's missing, and documents |
+| `POST /coach/profile/documents` | Add or replace a document |
+| `DELETE /coach/profile/documents/:id` | Remove a document |
+| `GET /coach/profile/documents/:id/file` | Read a document |
+| `POST /coach/profile/submit` | Submit for review |
 
 No SMS is sent yet. Codes go to the log and, outside production, come back as `devCode`. See `docs/temporary-code-to-remove.md` in the project docs.
