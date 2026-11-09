@@ -16,6 +16,10 @@ Rails.application.routes.draw do
     post "profile/documents", to: "documents#create"
     delete "profile/documents/:id", to: "documents#destroy"
     get "profile/documents/:id/file", to: "documents#file"
+    get "packages", to: "packages#index"
+    post "packages", to: "packages#create"
+    patch "packages/:id", to: "packages#update"
+    delete "packages/:id", to: "packages#destroy"
   end
 
   # Last, so every unknown path gets a 404 in the API's envelope.
