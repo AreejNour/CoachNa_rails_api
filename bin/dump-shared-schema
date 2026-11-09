@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Writes db/structure.sql from the shared database. Schema only: this reads and changes nothing there.
+# Run it after a Node migration that Rails needs. Node's migration bookkeeping (drizzle schema) is left out.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+pg_dump --schema-only --no-owner --no-privileges --exclude-schema=drizzle \
+  --restrict-key=coachnarails --file=db/structure.sql \
+  "${DATABASE_URL:-postgres://postgres:postgres@localhost:5432/coacha}"
