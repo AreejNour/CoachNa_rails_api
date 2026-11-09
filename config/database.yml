@@ -1,0 +1,21 @@
+# Development uses the database shared with the Node API (CoachNa_api). Rails never resets it:
+# see lib/shared_db_guard.rb. Tests get their own database, which is safe to reset.
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+
+development:
+  <<: *default
+  url: <%= ENV.fetch("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/coacha") %>
+
+test:
+  <<: *default
+  host: localhost
+  username: postgres
+  password: postgres
+  database: coacha_rails_test
+
+production:
+  <<: *default
+  url: <%= ENV["DATABASE_URL"] %>
