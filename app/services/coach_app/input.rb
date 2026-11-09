@@ -36,6 +36,12 @@ module CoachApp
       value
     end
 
+    # The phone as E.164. A missing value is invalid input; a value that isn't a number is "invalid phone".
+    def self.phone(value, country)
+      phone = text(value)
+      PhoneNumber.normalize(phone, self.country(country)) || raise(ApiError.new(400, "invalid phone"))
+    end
+
     def self.invalid!
       raise ApiError.new(400, "validation failed")
     end

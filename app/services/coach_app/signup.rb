@@ -2,7 +2,7 @@ module CoachApp
   # A new coach signs up in two calls: ask for a code, then send it back with their details.
   module Signup
     def self.request_otp(phone:, country:)
-      e164 = normalized_phone(phone, country)
+      e164 = Input.phone(phone, country)
       refuse_registered(e164)
 
       otp = Otp.create(e164)
@@ -15,7 +15,7 @@ module CoachApp
       password = Input.password(password)
       full_name = Input.full_name(full_name)
       email = Input.email(email) unless email.nil?
-      e164 = normalized_phone(phone, country)
+      e164 = Input.phone(phone, country)
       refuse_registered(e164)
 
       coach = Otp.verify_and_consume(e164, code) do
@@ -32,12 +32,6 @@ module CoachApp
     rescue ActiveRecord::RecordNotUnique => error
       raise ApiError.new(409, error.message.include?("coaches_email_unique") ? "email already registered" : "phone already registered")
     end
-
-    def self.normalized_phone(phone, country)
-      phone = Input.text(phone)
-      PhoneNumber.normalize(phone, Input.country(country)) || raise(ApiError.new(400, "invalid phone"))
-    end
-    private_class_method :normalized_phone
 
     def self.refuse_registered(e164)
       raise ApiError.new(409, "phone already registered") if Coach.exists?(phone: e164)
