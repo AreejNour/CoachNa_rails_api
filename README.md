@@ -54,6 +54,15 @@ bin/dump-shared-schema
 RAILS_ENV=test bin/rails db:schema:load
 ```
 
+## Approving a coach in development
+
+The admin panel arrives in Milestones 33-34. Until then, use these commands, which refuse to run in production:
+
+```bash
+bin/rails coach_review:approve PHONE=+201001234567 COMMISSION=15
+bin/rails coach_review:reject PHONE=+201001234567 REASON="Your certificate photo is too blurry to read."
+```
+
 ## Coach API
 
 Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error": "..." }`.
@@ -70,5 +79,10 @@ Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error"
 | `POST /coach/auth/logout` | Revoke a refresh token |
 | `GET /coach/me` | The signed-in coach |
 | `PATCH /coach/profile` | Edit profile details |
+| `GET /coach/profile/status` | Review status, what's missing, and documents |
+| `POST /coach/profile/documents` | Add or replace a document |
+| `DELETE /coach/profile/documents/:id` | Remove a document |
+| `GET /coach/profile/documents/:id/file` | Read a document |
+| `POST /coach/profile/submit` | Submit for review |
 
 No SMS is sent yet. Codes go to the log and, outside production, come back as `devCode`. See `docs/temporary-code-to-remove.md` in the project docs.

@@ -14,12 +14,12 @@ class ApplicationController < ActionController::API
     render json: { success: true, data: data }, status: status
   end
 
-  def render_failure(status, message)
-    render json: { success: false, error: message }, status: status
+  def render_failure(status, message, **extra)
+    render json: { success: false, error: message, **extra }, status: status
   end
 
   def render_api_error(error)
-    render_failure(error.status, error.message)
+    render_failure(error.status, error.message, **error.extra)
   end
 
   def render_malformed_json

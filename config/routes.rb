@@ -11,6 +11,8 @@ Rails.application.routes.draw do
     post "auth/logout", to: "sessions#logout"
     get "me", to: "me#show"
     patch "profile", to: "profiles#update"
+    get "profile/status", to: "review#status"
+    post "profile/submit", to: "review#submit"
     post "profile/documents", to: "documents#create"
     delete "profile/documents/:id", to: "documents#destroy"
     get "profile/documents/:id/file", to: "documents#file"
