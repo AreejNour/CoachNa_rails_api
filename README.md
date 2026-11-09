@@ -35,6 +35,7 @@ In `.env`, set `JWT_ACCESS_SECRET` to the **same value as the Node API's**. Each
 
 ```bash
 bin/rails server    # http://localhost:3003
+bin/rails server -b 0.0.0.0 -p 3003    # reachable from a real phone; -b alone falls back to port 3000
 bin/rails test      # uses coacha_rails_test, never the shared database
 bin/rubocop
 ```
