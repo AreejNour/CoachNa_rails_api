@@ -44,3 +44,17 @@ class SharedDbGuardTest < ActiveSupport::TestCase
     seen
   end
 end
+
+class SharedDbDevelopmentServerTest < ActiveSupport::TestCase
+  # Rails' pending-migrations check creates schema_migrations and ar_internal_metadata on the first
+  # request, which would add them to the database shared with the Node API.
+  test "the development server doesn't check for pending migrations" do
+    output = IO.popen(
+      { "RAILS_ENV" => "development" },
+      [ "bin/rails", "runner", "print Rails.application.config.middleware.include?(ActiveRecord::Migration::CheckPending)" ],
+      chdir: Rails.root, err: File::NULL, &:read
+    )
+
+    assert_equal "false", output.strip
+  end
+end
