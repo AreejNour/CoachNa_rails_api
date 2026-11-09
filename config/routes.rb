@@ -11,6 +11,9 @@ Rails.application.routes.draw do
     post "auth/logout", to: "sessions#logout"
     get "me", to: "me#show"
     patch "profile", to: "profiles#update"
+    post "profile/documents", to: "documents#create"
+    delete "profile/documents/:id", to: "documents#destroy"
+    get "profile/documents/:id/file", to: "documents#file"
   end
 
   # Last, so every unknown path gets a 404 in the API's envelope.

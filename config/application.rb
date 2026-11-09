@@ -26,7 +26,7 @@ module CoachNaRailsApi
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_lib(ignore: %w[assets tasks middleware])
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -40,6 +40,9 @@ module CoachNaRailsApi
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    require_relative "../lib/middleware/bad_request_envelope"
+    config.middleware.use BadRequestEnvelope
 
     # The tables are shared with the Node API, and structure.sql keeps Postgres enums and defaults exactly.
     config.active_record.schema_format = :sql
