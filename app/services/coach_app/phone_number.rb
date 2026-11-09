@@ -13,7 +13,10 @@ module CoachApp
       return unless input.is_a?(String) && input.valid_encoding? && !input.include?("\0")
 
       phone = Phonelib.parse(ascii_digits(input), country)
-      phone.e164 if phone.e164.start_with?(EGYPT_PREFIX) ? phone.valid? : matches_country_pattern?(phone)
+      e164 = phone.e164
+      return if e164.blank?
+
+      e164 if e164.start_with?(EGYPT_PREFIX) ? phone.valid? : matches_country_pattern?(phone)
     end
 
     # Every selectable country, for the app's picker. Phonelib also lists non-geographic
