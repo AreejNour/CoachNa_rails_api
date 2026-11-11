@@ -88,5 +88,9 @@ Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error"
 | `POST /coach/packages` | Create a package |
 | `PATCH /coach/packages/:id` | Edit a package |
 | `DELETE /coach/packages/:id` | Remove a package (soft delete) |
+| `GET /coach/questionnaire` | List your non-archived questions, in order |
+| `POST /coach/questionnaire/questions` | Add a question (creates the questionnaire if needed) |
+| `PATCH /coach/questionnaire/questions/:id` | Edit a question (not its type) |
+| `DELETE /coach/questionnaire/questions/:id` | Remove a question (archive) |
 
 No SMS is sent yet. Codes go to the log and, outside production, come back as `devCode`. See `docs/temporary-code-to-remove.md` in the project docs.
