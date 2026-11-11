@@ -24,6 +24,10 @@ Rails.application.routes.draw do
     post "questionnaire/questions", to: "questionnaire#create"
     patch "questionnaire/questions/:id", to: "questionnaire#update"
     delete "questionnaire/questions/:id", to: "questionnaire#destroy"
+    get "clients", to: "clients#index"
+    post "clients/mark-seen", to: "clients#mark_seen"
+    get "clients/:id", to: "clients#show"
+    get "notifications/unread-count", to: "notifications#unread_count"
   end
 
   # Last, so every unknown path gets a 404 in the API's envelope.
