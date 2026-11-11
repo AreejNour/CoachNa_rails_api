@@ -5,4 +5,5 @@ class Coach < ApplicationRecord
 
   has_many :coach_documents
   has_many :coach_packages
+  has_one :questionnaire
 end
