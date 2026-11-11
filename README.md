@@ -84,5 +84,9 @@ Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error"
 | `DELETE /coach/profile/documents/:id` | Remove a document |
 | `GET /coach/profile/documents/:id/file` | Read a document |
 | `POST /coach/profile/submit` | Submit for review |
+| `GET /coach/packages` | List your active packages, newest first |
+| `POST /coach/packages` | Create a package |
+| `PATCH /coach/packages/:id` | Edit a package |
+| `DELETE /coach/packages/:id` | Remove a package (soft delete) |
 
 No SMS is sent yet. Codes go to the log and, outside production, come back as `devCode`. See `docs/temporary-code-to-remove.md` in the project docs.
