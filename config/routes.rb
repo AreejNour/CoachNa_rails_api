@@ -20,6 +20,10 @@ Rails.application.routes.draw do
     post "packages", to: "packages#create"
     patch "packages/:id", to: "packages#update"
     delete "packages/:id", to: "packages#destroy"
+    get "questionnaire", to: "questionnaire#index"
+    post "questionnaire/questions", to: "questionnaire#create"
+    patch "questionnaire/questions/:id", to: "questionnaire#update"
+    delete "questionnaire/questions/:id", to: "questionnaire#destroy"
   end
 
   # Last, so every unknown path gets a 404 in the API's envelope.

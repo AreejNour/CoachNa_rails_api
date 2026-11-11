@@ -1,7 +1,7 @@
 module CoachApp
   class PackagesController < BaseController
     def index
-      render_success(packages: Packages.list(current_coach).map { |p| PackageJson.call(p) })
+      render_success({ packages: Packages.list(current_coach).map { |p| PackageJson.call(p) } })
     end
 
     def create
