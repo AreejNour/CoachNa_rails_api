@@ -92,5 +92,9 @@ Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error"
 | `POST /coach/questionnaire/questions` | Add a question (creates the questionnaire if needed) |
 | `PATCH /coach/questionnaire/questions/:id` | Edit a question (not its type) |
 | `DELETE /coach/questionnaire/questions/:id` | Remove a question (archive) |
+| `GET /coach/clients` | List your subscribers, with which are new |
+| `GET /coach/clients/:id` | One client's health profile and questionnaire answers |
+| `POST /coach/clients/mark-seen` | Mark the new-client notifications read |
+| `GET /coach/notifications/unread-count` | Your unread notification count |
 
 No SMS is sent yet. Codes go to the log and, outside production, come back as `devCode`. See `docs/temporary-code-to-remove.md` in the project docs.
