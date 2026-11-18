@@ -7,7 +7,9 @@ module CoachApp
     module Reader
       MODEL = :"claude-opus-5-5"
       MAX_TOKENS = 64_000
-      TIMEOUT_SECONDS = 110
+      # Per attempt in the SDK, so no retries: the answer (or 502) must come before the app's 120 s.
+      TIMEOUT_SECONDS = 100
+      MAX_RETRIES = 0
       ITEM_KINDS = %w[food macro portion text].freeze
       UNITS = %w[g ml piece tbsp tsp cup].freeze
       SLOTS = %w[breakfast lunch dinner snack].freeze
@@ -107,8 +109,7 @@ module CoachApp
         key = ENV["ANTHROPIC_API_KEY"].to_s
         raise Unavailable, "ANTHROPIC_API_KEY is not set" if key.empty?
 
-        client = Anthropic::Client.new(api_key: key, timeout: TIMEOUT_SECONDS, max_retries: 1)
-        message = client.beta.messages.stream(
+        message = client(key).beta.messages.stream(
           model: MODEL,
           max_tokens: MAX_TOKENS,
           thinking: { type: :adaptive },
@@ -126,17 +127,34 @@ module CoachApp
         ).accumulated_message
         parse(message)
       rescue Anthropic::Errors::Error => e
-        raise Unavailable, "#{e.class}: #{e.message}"
+        raise Unavailable, e.class.name # class only: messages can quote request or response data
       end
 
+      def self.client(key)
+        Anthropic::Client.new(api_key: key, timeout: TIMEOUT_SECONDS, max_retries: MAX_RETRIES)
+      end
+
+      # Errors here must never carry model output or PDF text: they are logged.
       def self.parse(message)
         reason = message.stop_reason
         raise Unreadable, "stop_reason #{reason}" unless reason == :end_turn
 
-        text = message.content.select { |b| b.type == :text }.map(&:text).join
-        JSON.parse(text)
-      rescue JSON::ParserError => e
-        raise Unreadable, "not JSON: #{e.message}"
+        # After a mid-stream fallback, the text before the `fallback` block is the declined
+        # model's partial answer: read what follows it first, then everything.
+        blocks = message.content
+        last_fallback = blocks.rindex { |b| b.type == :fallback }
+        candidates = []
+        candidates << blocks.drop(last_fallback + 1) if last_fallback
+        candidates << blocks
+        candidates.each do |list|
+          text = list.select { |b| b.type == :text }.map(&:text).join
+          begin
+            return JSON.parse(text)
+          rescue JSON::ParserError
+            next
+          end
+        end
+        raise Unreadable, "output was not JSON"
       end
 
       def self.food_lines(foods)
