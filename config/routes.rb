@@ -34,6 +34,8 @@ Rails.application.routes.draw do
     get "subscriptions/:subscription_id/plan", to: "plans#show"
     put "subscriptions/:subscription_id/plan/draft", to: "plans#save_draft"
     post "subscriptions/:subscription_id/plan/publish", to: "plans#publish"
+    get "reviews", to: "reviews#index"
+    get "reviews/photos/:id", to: "reviews#photo"
     get "conversations", to: "conversations#index"
     get "conversations/:id/messages", to: "conversations#messages"
     post "conversations/:id/messages", to: "conversations#send_message"

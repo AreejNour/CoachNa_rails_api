@@ -96,5 +96,7 @@ Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error"
 | `GET /coach/clients/:id` | One client's health profile and questionnaire answers |
 | `POST /coach/clients/mark-seen` | Mark the new-client notifications read |
 | `GET /coach/notifications/unread-count` | Your unread notification count |
+| `GET /coach/reviews` | Your rating summary and visible client reviews (with visible photos), newest first |
+| `GET /coach/reviews/photos/:id` | A visible review photo of yours (bytes or signed redirect; `Cache-Control: no-store`) |
 
 No SMS is sent yet. Codes go to the log and, outside production, come back as `devCode`. See `docs/temporary-code-to-remove.md` in the project docs.
