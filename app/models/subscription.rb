@@ -2,4 +2,5 @@
 class Subscription < ApplicationRecord
   belongs_to :coach
   belongs_to :client
+  has_many :plans
 end

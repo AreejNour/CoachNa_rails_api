@@ -27,6 +27,13 @@ Rails.application.routes.draw do
     get "clients", to: "clients#index"
     post "clients/mark-seen", to: "clients#mark_seen"
     get "clients/:id", to: "clients#show"
+    get "foods", to: "foods#index"
+    post "foods", to: "foods#create"
+    patch "foods/:id", to: "foods#update"
+    delete "foods/:id", to: "foods#destroy"
+    get "subscriptions/:subscription_id/plan", to: "plans#show"
+    put "subscriptions/:subscription_id/plan/draft", to: "plans#save_draft"
+    post "subscriptions/:subscription_id/plan/publish", to: "plans#publish"
     get "notifications/unread-count", to: "notifications#unread_count"
   end
 
