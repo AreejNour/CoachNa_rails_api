@@ -10,6 +10,10 @@ module CoachApp
       MAX_ITEMS = 30
       FLAG_MAX = PlanInput::IMPORT_FLAG_MAX
       UNMATCHED = "Couldn't match a food — pick one".freeze
+      # Defence in depth: a text line that starts with an amount (optional bullet, digits incl.
+      # Arabic-Indic, optional decimal, optional unit) is almost certainly a food we failed to
+      # match, so it is flagged even when the model gave no doubt.
+      AMOUNT_LINE = /\A[\s+\-•*]*[\d٠-٩]+(\.\d+)?\s*(g|gm|grams?|ml|جم|غ|مل)?(\b|\s|\z)/i
       CHECK_AMOUNT = "Check this amount".freeze
       TOO_LONG = "Plan was longer than CoachNa allows — check the rest".freeze
       UNREADABLE = "(unreadable line)".freeze
@@ -125,7 +129,7 @@ module CoachApp
 
       def macro_item(raw, flags)
         grams = raw["grams"]
-        unless PlanInput::MACROS.include?(raw["macro"]) && number?(grams) && grams > 0 &&
+        unless PlanInput::MACROS.include?(raw["macro"]) && number?(grams) && grams >= PlanInput::MACRO_GRAMS_MIN &&
                grams <= PlanInput::MACRO_GRAMS_MAX
           flags.unshift(CHECK_AMOUNT)
           return nil
@@ -138,7 +142,7 @@ module CoachApp
 
       def portion_item(raw, flags)
         count = raw["portionCount"]
-        unless PlanInput::PORTION_GROUPS.include?(raw["portionGroup"]) && number?(count) && count > 0 &&
+        unless PlanInput::PORTION_GROUPS.include?(raw["portionGroup"]) && number?(count) && count >= PlanInput::PORTION_COUNT_MIN &&
                count <= PlanInput::PORTION_COUNT_MAX
           flags.unshift(CHECK_AMOUNT)
           return nil
@@ -154,6 +158,8 @@ module CoachApp
         text = clean(raw["text"], PlanInput::FREE_TEXT_MAX) if raw["_from_string"]
         # Anything we invented or replaced (unknown kind, blank text, bare string) must be checked.
         flags << UNREADABLE_FLAG if flags.empty? && (raw["kind"] != "text" || text.nil? || raw["_from_string"])
+        flags << UNMATCHED if flags.empty? && raw["kind"] == "text" && clean(raw["doubt"], 1).nil? &&
+                              text&.match?(AMOUNT_LINE)
         { "kind" => "text", "foodId" => nil, "quantity" => nil, "unit" => nil, "preparation" => nil,
           "macro" => nil, "macroGrams" => nil, "portionGroup" => nil, "portionCount" => nil,
           "freeText" => text || UNREADABLE }

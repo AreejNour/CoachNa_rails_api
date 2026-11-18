@@ -222,6 +222,8 @@ class CoachApp::PlansControllerTest < ActionDispatch::IntegrationTest
     bad.call({ kind: "macro", macro: "sugar", macroGrams: 30 })
     bad.call({ kind: "macro", macro: "fat", macroGrams: 5001 })
     bad.call({ kind: "macro", macro: "fat", macroGrams: 0 })
+    bad.call({ kind: "macro", macro: "fat", macroGrams: 0.004 })
+    bad.call({ kind: "portion", portionGroup: "carb", portionCount: 0.004 })
     bad.call({ kind: "portion", portionGroup: "carb", portionCount: 21 })
     bad.call({ kind: "portion", portionGroup: "carb", portionCount: 0 })
     bad.call({ kind: "portion", portionGroup: "nuts", portionCount: 1 })

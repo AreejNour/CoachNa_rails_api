@@ -123,6 +123,30 @@ class CoachApp::PlanImport::NormalizerTest < ActiveSupport::TestCase
     assert_equal 2, first_item(out)["portionCount"]
   end
 
+  test "sub-0.01 macro grams and portion counts become flagged text that passes validation" do
+    out = run_norm(raw_with([ { "kind" => "macro", "macro" => "fat", "grams" => 0.004, "sourceLine" => "x fat" } ]))
+    assert_equal "text", first_item(out)["kind"]
+    assert first_item(out)["importFlag"]
+    out = run_norm(raw_with([ { "kind" => "portion", "portionGroup" => "carb", "portionCount" => 0.004, "sourceLine" => "x carb" } ]))
+    assert_equal "text", first_item(out)["kind"]
+    assert first_item(out)["importFlag"]
+  end
+
+  test "text line that starts with an amount is flagged even without doubt" do
+    [ "150 g chicken breast", "2 eggs", "+ ٣٠٠ جم أرز", "1.5 cups oats" ].each do |line|
+      out = run_norm(raw_with([ { "kind" => "text", "text" => line, "sourceLine" => line } ]))
+      assert_equal "text", first_item(out)["kind"]
+      assert_equal "Couldn't match a food — pick one", first_item(out)["importFlag"], line
+    end
+  end
+
+  test "ordinary text and text with a doubt are not given the unmatched flag" do
+    out = run_norm(raw_with([ { "kind" => "text", "text" => "any snack below 150 kcal", "sourceLine" => "any snack below 150 kcal" } ]))
+    assert_nil first_item(out)["importFlag"]
+    out = run_norm(raw_with([ { "kind" => "text", "text" => "2 eggs", "sourceLine" => "2 eggs", "doubt" => "no matching food" } ]))
+    assert_equal "no matching food", first_item(out)["importFlag"]
+  end
+
   test "text item maps text to freeText and bad kind falls back" do
     out = run_norm(raw_with([ { "kind" => "text", "text" => "any vegetables", "sourceLine" => "veg" } ]))
     assert_equal "veg", first_item(out)["freeText"]

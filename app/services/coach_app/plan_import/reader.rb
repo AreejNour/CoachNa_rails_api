@@ -88,8 +88,9 @@ module CoachApp
         householdUnit is that unit. Otherwise use g or ml.
 
         Rules:
-        - Never invent a foodId. Use only ids from the foods list. If no food matches, use kind text
-          with foodId null and put the original line in text.
+        - Never invent a foodId. Use only ids from the foods list. Whenever a line names a food or an
+          amount but no foodId matches, use kind text with foodId null, put the original line in
+          text, and set doubt to "no matching food".
         - Set unused fields to null. Always copy the original line into sourceLine.
         - If a line offers alternatives ("1 tuna or 150 g fish"), use the first as the item and
           describe the other in doubt.

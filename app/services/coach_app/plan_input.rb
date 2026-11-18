@@ -9,7 +9,9 @@ module CoachApp
     KINDS = %w[food macro portion text].freeze
     MACROS = %w[protein carbs fat].freeze
     PORTION_GROUPS = %w[carb protein fat fruit dairy vegetable].freeze
+    MACRO_GRAMS_MIN = 0.01 # columns keep 2 decimals; anything smaller would store as 0.00
     MACRO_GRAMS_MAX = 5000
+    PORTION_COUNT_MIN = 0.01
     PORTION_COUNT_MAX = 20
     IMPORT_FLAG_MAX = 300
     NOTES_PLAN_MAX = 4000
@@ -87,14 +89,14 @@ module CoachApp
 
     def self.macro_fields(c, _visible)
       grams = c["macroGrams"]
-      Input.invalid! unless grams.is_a?(Numeric) && grams > 0 && grams <= MACRO_GRAMS_MAX
+      Input.invalid! unless grams.is_a?(Numeric) && grams >= MACRO_GRAMS_MIN && grams <= MACRO_GRAMS_MAX
       { macro: enum(c["macro"], MACROS), macro_grams: format("%.2f", grams) }
     end
     private_class_method :macro_fields
 
     def self.portion_fields(c, _visible)
       count = c["portionCount"]
-      Input.invalid! unless count.is_a?(Numeric) && count > 0 && count <= PORTION_COUNT_MAX
+      Input.invalid! unless count.is_a?(Numeric) && count >= PORTION_COUNT_MIN && count <= PORTION_COUNT_MAX
       { portion_group: enum(c["portionGroup"], PORTION_GROUPS), portion_count: format("%.2f", count) }
     end
     private_class_method :portion_fields
