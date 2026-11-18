@@ -9,7 +9,7 @@ module CoachApp
         id: review.id,
         rating: review.rating,
         body: review.body,
-        reviewerFirstName: review.client.full_name.to_s.split.first,
+        reviewerFirstName: review.client.full_name.to_s.split.first || "",
         planName: review.subscription&.coach_package&.name,
         createdAt: review.created_at.iso8601,
         photos: photos(review)

@@ -84,6 +84,22 @@ class CoachApp::ReviewsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Nour", data["reviews"][0]["reviewerFirstName"]
   end
 
+  test "first name is an empty string for a whitespace-only full_name" do
+    client = make_client(1, "Nour")
+    client.update_column(:full_name, "   ")
+    review(client, 1.day.ago)
+    get "/coach/reviews", headers: auth
+    assert_equal "", data["reviews"][0]["reviewerFirstName"]
+  end
+
+  test "reviews sharing a created_at are ordered by id descending" do
+    at = 2.days.ago
+    a = review(make_client(1, "Nour"), at)
+    b = review(make_client(2, "Omar"), at)
+    get "/coach/reviews", headers: auth
+    assert_equal [ b.id, a.id ].sort.reverse, data["reviews"].map { |r| r["id"] }
+  end
+
   JPEG_BYTES = "\xFF\xD8\xFF\xE0\x00\x10JFIF".b
 
   def stored_photo(rev, kind: "before", ext: "jpg", status: "visible", bytes: JPEG_BYTES)
