@@ -27,6 +27,8 @@ Rails.application.routes.draw do
     get "clients", to: "clients#index"
     post "clients/mark-seen", to: "clients#mark_seen"
     get "clients/:id", to: "clients#show"
+    get "portion-sizes", to: "portion_sizes#show"
+    put "portion-sizes", to: "portion_sizes#update"
     get "foods", to: "foods#index"
     post "foods", to: "foods#create"
     patch "foods/:id", to: "foods#update"

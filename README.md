@@ -95,6 +95,8 @@ Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error"
 | `GET /coach/clients` | List your subscribers, with which are new |
 | `GET /coach/clients/:id` | One client's health profile and questionnaire answers |
 | `POST /coach/clients/mark-seen` | Mark the new-client notifications read |
+| `GET /coach/portion-sizes` | Your portion sizes (grams of the defining macro per portion) for carb, protein, fat, fruit, dairy |
+| `PUT /coach/portion-sizes` | Set sizes for the groups sent (1-200 g); the standard value clears the override |
 | `GET /coach/notifications/unread-count` | Your unread notification count |
 | `GET /coach/reviews` | Your rating summary and visible client reviews (with visible photos), newest first |
 | `GET /coach/reviews/photos/:id` | A visible review photo of yours (bytes or signed redirect; `Cache-Control: no-store`) |
