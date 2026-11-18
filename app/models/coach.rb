@@ -6,5 +6,6 @@ class Coach < ApplicationRecord
   has_many :coach_documents
   has_many :coach_packages
   has_many :subscriptions
+  has_many :foods, foreign_key: :owner_coach_id, inverse_of: :owner_coach
   has_one :questionnaire
 end

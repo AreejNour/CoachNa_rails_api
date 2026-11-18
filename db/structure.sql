@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict coachnarails
+\restrict 4vATTGJ1FaLKgm4b0Gm17gWlvPU1xzPY8nd9KZixyO0KU7mZHXaFUsbjDe8nYHf
 
 -- Dumped from database version 16.15
--- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
+-- Dumped by pg_dump version 16.15
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -17,6 +17,13 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: drizzle; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA drizzle;
+
 
 --
 -- Name: client_status; Type: TYPE; Schema: public; Owner: -
@@ -58,6 +65,37 @@ CREATE TYPE public.coach_status AS ENUM (
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: __drizzle_migrations; Type: TABLE; Schema: drizzle; Owner: -
+--
+
+CREATE TABLE drizzle.__drizzle_migrations (
+    id integer NOT NULL,
+    hash text NOT NULL,
+    created_at bigint
+);
+
+
+--
+-- Name: __drizzle_migrations_id_seq; Type: SEQUENCE; Schema: drizzle; Owner: -
+--
+
+CREATE SEQUENCE drizzle.__drizzle_migrations_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: __drizzle_migrations_id_seq; Type: SEQUENCE OWNED BY; Schema: drizzle; Owner: -
+--
+
+ALTER SEQUENCE drizzle.__drizzle_migrations_id_seq OWNED BY drizzle.__drizzle_migrations.id;
+
 
 --
 -- Name: client_addresses; Type: TABLE; Schema: public; Owner: -
@@ -239,6 +277,33 @@ CREATE TABLE public.conversations (
 
 
 --
+-- Name: foods; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.foods (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name_ar text NOT NULL,
+    name_en text NOT NULL,
+    "group" text NOT NULL,
+    protein_per_100 numeric(5,2) NOT NULL,
+    carbs_per_100 numeric(5,2) NOT NULL,
+    fat_per_100 numeric(5,2) NOT NULL,
+    weight_basis text NOT NULL,
+    household_unit text,
+    grams_per_unit numeric(7,2),
+    owner_coach_id uuid,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT foods_carbs_range CHECK (((carbs_per_100 >= (0)::numeric) AND (carbs_per_100 <= (100)::numeric))),
+    CONSTRAINT foods_fat_range CHECK (((fat_per_100 >= (0)::numeric) AND (fat_per_100 <= (100)::numeric))),
+    CONSTRAINT foods_grams_per_unit_positive CHECK (((grams_per_unit IS NULL) OR (grams_per_unit > (0)::numeric))),
+    CONSTRAINT foods_group_valid CHECK (("group" = ANY (ARRAY['carb'::text, 'protein'::text, 'fat'::text, 'fruit'::text, 'vegetable'::text, 'dairy'::text, 'free'::text]))),
+    CONSTRAINT foods_protein_range CHECK (((protein_per_100 >= (0)::numeric) AND (protein_per_100 <= (100)::numeric))),
+    CONSTRAINT foods_weight_basis_valid CHECK ((weight_basis = ANY (ARRAY['cooked'::text, 'raw'::text, 'as_is'::text])))
+);
+
+
+--
 -- Name: messages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -318,18 +383,21 @@ CREATE TABLE public.phone_verifications (
 
 
 --
--- Name: plan_meal_items; Type: TABLE; Schema: public; Owner: -
+-- Name: plan_meal_components; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.plan_meal_items (
+CREATE TABLE public.plan_meal_components (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     plan_meal_id uuid NOT NULL,
     "position" integer NOT NULL,
-    food_name text NOT NULL,
-    quantity numeric(7,2) NOT NULL,
-    unit text NOT NULL,
+    food_id uuid,
+    quantity numeric(7,2),
+    unit text,
     preparation text,
-    CONSTRAINT plan_meal_items_quantity_positive CHECK ((quantity > (0)::numeric))
+    free_text text,
+    CONSTRAINT plan_meal_components_quantity_positive CHECK (((quantity IS NULL) OR (quantity > (0)::numeric))),
+    CONSTRAINT plan_meal_components_shape CHECK ((((food_id IS NOT NULL) AND (quantity IS NOT NULL) AND (unit IS NOT NULL) AND (free_text IS NULL)) OR ((food_id IS NULL) AND (quantity IS NULL) AND (unit IS NULL) AND (free_text IS NOT NULL)))),
+    CONSTRAINT plan_meal_components_unit_valid CHECK (((unit IS NULL) OR (unit = ANY (ARRAY['g'::text, 'ml'::text, 'piece'::text, 'tbsp'::text, 'tsp'::text, 'cup'::text]))))
 );
 
 
@@ -339,20 +407,25 @@ CREATE TABLE public.plan_meal_items (
 
 CREATE TABLE public.plan_meals (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    plan_id uuid NOT NULL,
-    day_of_week integer,
+    plan_option_id uuid NOT NULL,
     slot text NOT NULL,
     "position" integer NOT NULL,
     title text NOT NULL,
-    spec_type text NOT NULL,
-    kcal integer,
-    protein_g integer,
-    carbs_g integer,
-    fat_g integer,
     notes text,
-    CONSTRAINT plan_meals_day_valid CHECK (((day_of_week IS NULL) OR ((day_of_week >= 0) AND (day_of_week <= 6)))),
-    CONSTRAINT plan_meals_slot_valid CHECK ((slot = ANY (ARRAY['breakfast'::text, 'lunch'::text, 'dinner'::text, 'snack'::text]))),
-    CONSTRAINT plan_meals_spec_type_valid CHECK ((spec_type = ANY (ARRAY['by_targets'::text, 'by_food'::text])))
+    CONSTRAINT plan_meals_slot_valid CHECK ((slot = ANY (ARRAY['breakfast'::text, 'lunch'::text, 'dinner'::text, 'snack'::text])))
+);
+
+
+--
+-- Name: plan_options; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plan_options (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    plan_id uuid NOT NULL,
+    "position" integer NOT NULL,
+    label text NOT NULL,
+    notes text
 );
 
 
@@ -473,6 +546,21 @@ CREATE TABLE public.weight_logs (
     weight_kg numeric(5,1) NOT NULL,
     logged_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: __drizzle_migrations id; Type: DEFAULT; Schema: drizzle; Owner: -
+--
+
+ALTER TABLE ONLY drizzle.__drizzle_migrations ALTER COLUMN id SET DEFAULT nextval('drizzle.__drizzle_migrations_id_seq'::regclass);
+
+
+--
+-- Name: __drizzle_migrations __drizzle_migrations_pkey; Type: CONSTRAINT; Schema: drizzle; Owner: -
+--
+
+ALTER TABLE ONLY drizzle.__drizzle_migrations
+    ADD CONSTRAINT __drizzle_migrations_pkey PRIMARY KEY (id);
 
 
 --
@@ -604,6 +692,14 @@ ALTER TABLE ONLY public.conversations
 
 
 --
+-- Name: foods foods_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.foods
+    ADD CONSTRAINT foods_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -636,11 +732,11 @@ ALTER TABLE ONLY public.phone_verifications
 
 
 --
--- Name: plan_meal_items plan_meal_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: plan_meal_components plan_meal_components_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.plan_meal_items
-    ADD CONSTRAINT plan_meal_items_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.plan_meal_components
+    ADD CONSTRAINT plan_meal_components_pkey PRIMARY KEY (id);
 
 
 --
@@ -649,6 +745,14 @@ ALTER TABLE ONLY public.plan_meal_items
 
 ALTER TABLE ONLY public.plan_meals
     ADD CONSTRAINT plan_meals_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: plan_options plan_options_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plan_options
+    ADD CONSTRAINT plan_options_pkey PRIMARY KEY (id);
 
 
 --
@@ -759,6 +863,20 @@ CREATE UNIQUE INDEX coach_reviews_subscription_unique ON public.coach_reviews US
 
 
 --
+-- Name: foods_group_active_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX foods_group_active_idx ON public.foods USING btree ("group", is_active);
+
+
+--
+-- Name: foods_owner_coach_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX foods_owner_coach_idx ON public.foods USING btree (owner_coach_id);
+
+
+--
 -- Name: messages_conversation_client_ref; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -801,10 +919,24 @@ CREATE INDEX phone_verifications_phone_idx ON public.phone_verifications USING b
 
 
 --
--- Name: plan_meals_plan_day_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: plan_meal_components_meal_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX plan_meals_plan_day_idx ON public.plan_meals USING btree (plan_id, day_of_week);
+CREATE INDEX plan_meal_components_meal_idx ON public.plan_meal_components USING btree (plan_meal_id);
+
+
+--
+-- Name: plan_meals_option_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX plan_meals_option_idx ON public.plan_meals USING btree (plan_option_id);
+
+
+--
+-- Name: plan_options_plan_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX plan_options_plan_position ON public.plan_options USING btree (plan_id, "position");
 
 
 --
@@ -965,6 +1097,14 @@ ALTER TABLE ONLY public.conversations
 
 
 --
+-- Name: foods foods_owner_coach_id_coaches_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.foods
+    ADD CONSTRAINT foods_owner_coach_id_coaches_id_fk FOREIGN KEY (owner_coach_id) REFERENCES public.coaches(id) ON DELETE SET NULL;
+
+
+--
 -- Name: messages messages_conversation_id_conversations_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -989,19 +1129,35 @@ ALTER TABLE ONLY public.payments
 
 
 --
--- Name: plan_meal_items plan_meal_items_plan_meal_id_plan_meals_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: plan_meal_components plan_meal_components_food_id_foods_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.plan_meal_items
-    ADD CONSTRAINT plan_meal_items_plan_meal_id_plan_meals_id_fk FOREIGN KEY (plan_meal_id) REFERENCES public.plan_meals(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.plan_meal_components
+    ADD CONSTRAINT plan_meal_components_food_id_foods_id_fk FOREIGN KEY (food_id) REFERENCES public.foods(id) ON DELETE RESTRICT;
 
 
 --
--- Name: plan_meals plan_meals_plan_id_plans_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: plan_meal_components plan_meal_components_plan_meal_id_plan_meals_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plan_meal_components
+    ADD CONSTRAINT plan_meal_components_plan_meal_id_plan_meals_id_fk FOREIGN KEY (plan_meal_id) REFERENCES public.plan_meals(id) ON DELETE CASCADE;
+
+
+--
+-- Name: plan_meals plan_meals_plan_option_id_plan_options_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.plan_meals
-    ADD CONSTRAINT plan_meals_plan_id_plans_id_fk FOREIGN KEY (plan_id) REFERENCES public.plans(id) ON DELETE CASCADE;
+    ADD CONSTRAINT plan_meals_plan_option_id_plan_options_id_fk FOREIGN KEY (plan_option_id) REFERENCES public.plan_options(id) ON DELETE CASCADE;
+
+
+--
+-- Name: plan_options plan_options_plan_id_plans_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plan_options
+    ADD CONSTRAINT plan_options_plan_id_plans_id_fk FOREIGN KEY (plan_id) REFERENCES public.plans(id) ON DELETE CASCADE;
 
 
 --
@@ -1096,5 +1252,5 @@ ALTER TABLE ONLY public.weight_logs
 -- PostgreSQL database dump complete
 --
 
-\unrestrict coachnarails
+\unrestrict 4vATTGJ1FaLKgm4b0Gm17gWlvPU1xzPY8nd9KZixyO0KU7mZHXaFUsbjDe8nYHf
 

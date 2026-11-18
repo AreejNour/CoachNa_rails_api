@@ -1,0 +1,142 @@
+require "test_helper"
+
+class CoachApp::PlansControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    @coach = Coach.create!(phone: "+201012348001", password_hash: "h", full_name: "Coach Mona")
+    @client = Client.create!(phone: "+201012348101", password_hash: "h", full_name: "Client")
+    @package = @coach.coach_packages.create!(name: "P", price_piastres: 50_000, duration_days: 30, includes: [ "x" ])
+    @rice = Food.create!(name_ar: "أرز", name_en: "Rice", group: "carb", protein_per_100: 2.7,
+                         carbs_per_100: 28, fat_per_100: 0.3, weight_basis: "cooked")
+    @sub = make_sub("awaiting_plan")
+  end
+
+  # Each subscription gets its own client: a client may have only one current subscription.
+  def make_sub(status, client: @client)
+    now = Time.current
+    Subscription.create!(client_id: client.id, coach_id: @coach.id, package_id: @package.id,
+                         status: status, price_piastres: 50_000, commission_percent: 10,
+                         commission_piastres: 5000, starts_at: now, ends_at: now + 30.days)
+  end
+
+  def another_client
+    @client_seq = (@client_seq || 0) + 1
+    Client.create!(phone: format("+2010123482%02d", @client_seq), password_hash: "h", full_name: "C#{@client_seq}")
+  end
+
+  def auth = { "Authorization" => "Bearer #{CoachApp::AccessToken.sign(@coach.id)}" }
+  def data = response.parsed_body["data"]
+
+  def plan_body(over = {})
+    {
+      notes: "Drink water.",
+      options: [
+        {
+          label: "Day 1",
+          meals: [
+            { slot: "breakfast", position: 1, title: "Oats",
+              components: [ { foodId: @rice.id, quantity: 80, unit: "g" }, { freeText: "coffee" } ] },
+            { slot: "lunch", position: 1, title: "Lunch",
+              components: [ { foodId: @rice.id, quantity: 150, unit: "g", preparation: "boiled" } ] }
+          ]
+        }
+      ]
+    }.merge(over)
+  end
+
+  def publish(sub = @sub, over = {})
+    post "/coach/subscriptions/#{sub.id}/plan/publish", params: plan_body(over), headers: auth, as: :json
+  end
+
+  test "every route needs a token" do
+    get "/coach/subscriptions/#{@sub.id}/plan"
+    assert_response :unauthorized
+    post "/coach/subscriptions/#{@sub.id}/plan/publish", params: plan_body, as: :json
+    assert_response :unauthorized
+  end
+
+  test "publish creates version 1, moves the subscription to active and writes a plan_ready notification" do
+    publish
+    assert_response :ok
+    assert_equal 1, data["plan"]["version"]
+    assert_equal "published", data["plan"]["status"]
+    assert_equal "active", @sub.reload.status
+
+    plan = Plan.find(data["plan"]["id"])
+    assert_equal 1, plan.plan_options.count
+    meals = plan.plan_options.first.plan_meals.order(:slot)
+    assert_equal %w[breakfast lunch], meals.pluck(:slot).sort
+    breakfast = meals.find { |m| m.slot == "breakfast" }
+    comps = breakfast.plan_meal_components.order(:position)
+    assert_equal [ @rice.id, nil ], comps.map(&:food_id)
+    assert_equal [ nil, "coffee" ], comps.map(&:free_text)
+
+    note = Notification.find_by(recipient_type: "client", recipient_id: @client.id, type: "plan_ready")
+    assert note
+    assert_equal "خطتك جاهزة", note.title
+    assert_equal({ "subscriptionId" => @sub.id, "planId" => plan.id }, note.data)
+  end
+
+  test "a second publish replaces the first (version 2) and the notification says updated" do
+    publish
+    first_id = data["plan"]["id"]
+    publish(@sub, notes: "v2")
+    assert_response :ok
+    assert_equal 2, data["plan"]["version"]
+    assert_equal "replaced", Plan.find(first_id).status
+    assert_equal 1, Plan.where(subscription_id: @sub.id, status: "published").count
+    assert_equal "تم تحديث خطتك",
+                 Notification.where(recipient_id: @client.id, type: "plan_ready").order(:created_at).last.title
+  end
+
+  test "save draft upserts a single hidden draft and show returns it" do
+    put "/coach/subscriptions/#{@sub.id}/plan/draft", params: plan_body, headers: auth, as: :json
+    assert_response :ok
+    assert_equal "draft", data["plan"]["status"]
+    put "/coach/subscriptions/#{@sub.id}/plan/draft", params: plan_body(notes: "edited"), headers: auth, as: :json
+    assert_equal 1, Plan.where(subscription_id: @sub.id, status: "draft").count
+
+    get "/coach/subscriptions/#{@sub.id}/plan", headers: auth
+    assert_equal "edited", data["plan"]["notes"]
+    assert_equal "draft", data["plan"]["status"]
+    # The client sees nothing until publish: no published plan, no notification.
+    assert_equal 0, Plan.where(subscription_id: @sub.id, status: "published").count
+    assert_nil Notification.find_by(recipient_id: @client.id, type: "plan_ready")
+  end
+
+  test "409 when the subscription is not ready or expired" do
+    early = make_sub("awaiting_questionnaire", client: another_client)
+    post "/coach/subscriptions/#{early.id}/plan/publish", params: plan_body, headers: auth, as: :json
+    assert_response :conflict
+
+    late = make_sub("awaiting_plan", client: another_client)
+    late.update!(ends_at: 1.second.ago)
+    post "/coach/subscriptions/#{late.id}/plan/publish", params: plan_body, headers: auth, as: :json
+    assert_response :conflict
+    assert_equal 0, Plan.where(subscription_id: late.id).count
+  end
+
+  test "400 for a foreign food, a bad unit, and a malformed component" do
+    other = Coach.create!(phone: "+201012348777", password_hash: "h", full_name: "O")
+    foreign = other.foods.create!(name_ar: "x", name_en: "x", group: "carb", protein_per_100: 1,
+                                  carbs_per_100: 1, fat_per_100: 1, weight_basis: "cooked", is_active: true)
+    publish(@sub, options: [ { label: "D", meals: [ { slot: "lunch", position: 1, title: "x",
+      components: [ { foodId: foreign.id, quantity: 100, unit: "g" } ] } ] } ])
+    assert_response :bad_request
+
+    publish(@sub, options: [ { label: "D", meals: [ { slot: "lunch", position: 1, title: "x",
+      components: [ { foodId: @rice.id, quantity: 100, unit: "piece" } ] } ] } ])
+    assert_response :bad_request
+
+    publish(@sub, options: [ { label: "D", meals: [ { slot: "lunch", position: 1, title: "x",
+      components: [ {} ] } ] } ])
+    assert_response :bad_request
+    assert_equal 0, Plan.where(subscription_id: @sub.id).count
+  end
+
+  test "another coach's subscription is 404" do
+    other = Coach.create!(phone: "+201012348888", password_hash: "h", full_name: "O")
+    token = { "Authorization" => "Bearer #{CoachApp::AccessToken.sign(other.id)}" }
+    post "/coach/subscriptions/#{@sub.id}/plan/publish", params: plan_body, headers: token, as: :json
+    assert_response :not_found
+  end
+end
