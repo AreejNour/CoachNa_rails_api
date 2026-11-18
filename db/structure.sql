@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 4vATTGJ1FaLKgm4b0Gm17gWlvPU1xzPY8nd9KZixyO0KU7mZHXaFUsbjDe8nYHf
+\restrict VYxaa8LdTlEQ6ITqt0Ukp3vvwYNdMPWcc5KVTcpXOXilvAKsMJxRjBJry81cNms
 
 -- Dumped from database version 16.15
 -- Dumped by pg_dump version 16.15
@@ -121,6 +121,23 @@ CREATE TABLE public.client_addresses (
 
 
 --
+-- Name: client_email_codes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.client_email_codes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    client_id uuid NOT NULL,
+    email text NOT NULL,
+    purpose text NOT NULL,
+    code_hash text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    consumed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: client_health_profiles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -165,7 +182,9 @@ CREATE TABLE public.clients (
     status public.client_status DEFAULT 'active'::public.client_status NOT NULL,
     phone_verified_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    email text,
+    email_verified_at timestamp with time zone
 );
 
 
@@ -272,7 +291,8 @@ CREATE TABLE public.conversations (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     subscription_id uuid NOT NULL,
     last_message_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    coach_last_read_at timestamp with time zone
 );
 
 
@@ -572,6 +592,14 @@ ALTER TABLE ONLY public.client_addresses
 
 
 --
+-- Name: client_email_codes client_email_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.client_email_codes
+    ADD CONSTRAINT client_email_codes_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: client_health_profiles client_health_profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -593,6 +621,14 @@ ALTER TABLE ONLY public.client_refresh_tokens
 
 ALTER TABLE ONLY public.client_refresh_tokens
     ADD CONSTRAINT client_refresh_tokens_token_unique UNIQUE (token);
+
+
+--
+-- Name: clients clients_email_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clients
+    ADD CONSTRAINT clients_email_unique UNIQUE (email);
 
 
 --
@@ -835,6 +871,13 @@ CREATE UNIQUE INDEX client_addresses_one_default_idx ON public.client_addresses 
 
 
 --
+-- Name: client_email_codes_client_purpose_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX client_email_codes_client_purpose_idx ON public.client_email_codes USING btree (client_id, purpose);
+
+
+--
 -- Name: coach_documents_single_instance_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1022,6 +1065,14 @@ CREATE INDEX weight_logs_client_time_idx ON public.weight_logs USING btree (clie
 
 ALTER TABLE ONLY public.client_addresses
     ADD CONSTRAINT client_addresses_client_id_clients_id_fk FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
+
+
+--
+-- Name: client_email_codes client_email_codes_client_id_clients_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.client_email_codes
+    ADD CONSTRAINT client_email_codes_client_id_clients_id_fk FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
 
 
 --
@@ -1252,5 +1303,5 @@ ALTER TABLE ONLY public.weight_logs
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 4vATTGJ1FaLKgm4b0Gm17gWlvPU1xzPY8nd9KZixyO0KU7mZHXaFUsbjDe8nYHf
+\unrestrict VYxaa8LdTlEQ6ITqt0Ukp3vvwYNdMPWcc5KVTcpXOXilvAKsMJxRjBJry81cNms
 
