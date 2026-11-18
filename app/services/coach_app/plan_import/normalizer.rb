@@ -13,6 +13,7 @@ module CoachApp
       CHECK_AMOUNT = "Check this amount".freeze
       TOO_LONG = "Plan was longer than CoachNa allows — check the rest".freeze
       UNREADABLE = "(unreadable line)".freeze
+      UNREADABLE_FLAG = "Couldn't read this line — check it".freeze
 
       def self.call(raw, visible_foods)
         new(visible_foods).call(raw)
@@ -52,7 +53,7 @@ module CoachApp
       end
 
       def meal(raw, index)
-        all = hashes(raw["items"])
+        all = usable_items(raw["items"])
         items = all.first(MAX_ITEMS).map { |i| item(i) }
         return nil if items.empty?
 
@@ -68,19 +69,37 @@ module CoachApp
         last["importFlag"] = join_flags(last["importFlag"], TOO_LONG)
       end
 
+      # Hash entries pass through; a non-blank string becomes a flagged text line; the rest is skipped.
+      def usable_items(value)
+        return [] unless value.is_a?(Array)
+
+        value.filter_map do |v|
+          if v.is_a?(Hash) then v
+          elsif clean(v, 1) then { "kind" => "text", "text" => v, "_from_string" => true }
+          end
+        end
+      end
+
+      # `flags` holds system flags only; the model's doubt is added last and trimmed to fit.
       def item(raw)
         flags = []
-        doubt = clean(raw["doubt"], FLAG_MAX)
-        flags << doubt if doubt
         built = case raw["kind"]
         when "food" then food_item(raw, flags)
         when "macro" then macro_item(raw, flags)
         when "portion" then portion_item(raw, flags)
-        else nil
         end
-        built ||= text_item(raw)
-        built["importFlag"] = flags.empty? ? nil : flags.join("; ").slice(0, FLAG_MAX)
+        built ||= text_item(raw, flags)
+        built["importFlag"] = combine(flags, clean(raw["doubt"], FLAG_MAX))
         built
+      end
+
+      def combine(flags, doubt)
+        system = flags.join("; ")
+        return doubt if system.empty?
+
+        room = FLAG_MAX - system.length - 2
+        full = doubt && room > 0 ? "#{system}; #{doubt.slice(0, room)}" : system
+        full.slice(0, FLAG_MAX)
       end
 
       def food_item(raw, flags)
@@ -130,8 +149,11 @@ module CoachApp
           "portionCount" => count, "freeText" => nil }
       end
 
-      def text_item(raw)
+      def text_item(raw, flags)
         text = clean(raw["sourceLine"], PlanInput::FREE_TEXT_MAX) || clean(raw["text"], PlanInput::FREE_TEXT_MAX)
+        text = clean(raw["text"], PlanInput::FREE_TEXT_MAX) if raw["_from_string"]
+        # Anything we invented or replaced (unknown kind, blank text, bare string) must be checked.
+        flags << UNREADABLE_FLAG if flags.empty? && (raw["kind"] != "text" || text.nil? || raw["_from_string"])
         { "kind" => "text", "foodId" => nil, "quantity" => nil, "unit" => nil, "preparation" => nil,
           "macro" => nil, "macroGrams" => nil, "portionGroup" => nil, "portionCount" => nil,
           "freeText" => text || UNREADABLE }
@@ -150,7 +172,9 @@ module CoachApp
       end
 
       def join_flags(existing, extra)
-        [ existing, extra ].compact.join("; ").slice(0, FLAG_MAX)
+        return extra unless existing
+
+        "#{existing.slice(0, FLAG_MAX - extra.length - 2)}; #{extra}"
       end
     end
   end

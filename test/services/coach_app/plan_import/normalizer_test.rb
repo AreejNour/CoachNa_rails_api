@@ -130,6 +130,35 @@ class CoachApp::PlanImport::NormalizerTest < ActiveSupport::TestCase
     assert_equal "text", first_item(out)["kind"]
   end
 
+  test "invented or replaced lines are always flagged" do
+    cases = [ { "kind" => "wat", "sourceLine" => "x" }, {}, { "kind" => "text", "text" => "  " } ]
+    cases.each do |item|
+      out = run_norm({ "options" => [ { "meals" => [ { "items" => [ item ] } ] } ] })
+      assert_equal "text", first_item(out)["kind"]
+      assert first_item(out)["importFlag"], item.inspect
+      assert_equal 1, out[:flag_count]
+    end
+  end
+
+  test "string item becomes flagged text, other junk skipped" do
+    out = run_norm({ "options" => [ { "meals" => [ { "items" => [ "2 eggs", 5, nil, "  " ] } ] } ] })
+    comps = out[:options][0]["meals"][0]["components"]
+    assert_equal 1, comps.length
+    assert_equal "2 eggs", comps[0]["freeText"]
+    assert comps[0]["importFlag"]
+    assert_equal 1, out[:flag_count]
+    assert_empty run_norm({ "options" => [ { "meals" => [ { "items" => [ 5 ] } ] } ] })[:options]
+    long = run_norm({ "options" => [ { "meals" => [ { "items" => [ "e" * 400 ] } ] } ] })
+    assert_equal 200, long[:options][0]["meals"][0]["components"][0]["freeText"].length
+  end
+
+  test "long doubt is trimmed so system flags survive" do
+    out = run_norm(raw_with([ { "foodId" => @potato.id, "quantity" => 15_000, "unit" => "g", "doubt" => "d" * 400 } ]))
+    flag = first_item(out)["importFlag"]
+    assert_operator flag.length, :<=, 300
+    assert_includes flag, "Check this amount"
+  end
+
   test "freeText is truncated to 200" do
     out = run_norm(raw_with([ { "kind" => "text", "sourceLine" => "a" * 500 } ]))
     assert_equal 200, first_item(out)["freeText"].length
