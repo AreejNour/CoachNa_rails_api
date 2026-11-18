@@ -6,6 +6,12 @@ module CoachApp
   # read back identically through Node's getMyPlan.
   module PlanInput
     SLOTS = %w[breakfast lunch dinner snack].freeze
+    KINDS = %w[food macro portion text].freeze
+    MACROS = %w[protein carbs fat].freeze
+    PORTION_GROUPS = %w[carb protein fat fruit dairy vegetable].freeze
+    MACRO_GRAMS_MAX = 5000
+    PORTION_COUNT_MAX = 20
+    IMPORT_FLAG_MAX = 300
     NOTES_PLAN_MAX = 4000
     NOTES_MAX = 2000
     LABEL_MAX = 100
@@ -36,7 +42,7 @@ module CoachApp
     def self.meal(m, visible)
       Input.invalid! unless m.is_a?(ActionController::Parameters) || m.is_a?(Hash)
       {
-        slot: enum(m["slot"], SLOTS),
+        slot: m["slot"].nil? ? nil : enum(m["slot"], SLOTS),
         position: non_negative_int(m["position"]),
         title: Input.trimmed(m["title"], max: TITLE_MAX),
         notes: optional_notes(m["notes"], NOTES_MAX),
@@ -47,26 +53,57 @@ module CoachApp
 
     def self.component(c, visible)
       Input.invalid! unless c.is_a?(ActionController::Parameters) || c.is_a?(Hash)
-      food_id = c["foodId"]
+      kind = c["kind"] || (c["foodId"].nil? ? "text" : "food")
+      Input.invalid! unless KINDS.include?(kind)
 
-      if food_id.nil?
-        # Free-text component: free text only, nothing else.
-        Input.invalid! if c["quantity"] || c["unit"] || c["preparation"]
-        { food_id: nil, quantity: nil, unit: nil, preparation: nil,
-          free_text: Input.trimmed(c["freeText"], max: FREE_TEXT_MAX) }
-      else
-        Input.invalid! if c["freeText"]
-        food = visible[food_id] || raise(ApiError.new(400, "unknown food in plan"))
-        unit = c["unit"]
-        # Only units we can convert to grams, so Node's read-time macro maths never throws.
-        unless unit == "g" || unit == "ml" || unit == food.household_unit
-          raise ApiError.new(400, "unit not usable for this food")
-        end
-        { food_id: food_id, quantity: quantity(c["quantity"]), unit: unit,
-          preparation: optional_trim(c["preparation"], PREP_MAX), free_text: nil }
-      end
+      only = ONLY_FIELDS.fetch(kind)
+      Input.invalid! if (ONLY_FIELDS.values.flatten.uniq - only).any? { |k| !c[k].nil? }
+
+      base = { kind: kind, food_id: nil, quantity: nil, unit: nil, preparation: nil, macro: nil,
+               macro_grams: nil, portion_group: nil, portion_count: nil, free_text: nil,
+               import_flag: optional_trim(c["importFlag"], IMPORT_FLAG_MAX) }
+      base.merge(send(:"#{kind}_fields", c, visible))
     end
     private_class_method :component
+
+    ONLY_FIELDS = {
+      "food" => %w[foodId quantity unit preparation],
+      "macro" => %w[macro macroGrams],
+      "portion" => %w[portionGroup portionCount],
+      "text" => %w[freeText]
+    }.freeze
+
+    def self.food_fields(c, visible)
+      food = visible[c["foodId"]] || raise(ApiError.new(400, "unknown food in plan"))
+      unit = c["unit"]
+      # Only units we can convert to grams, so Node's read-time macro maths never throws.
+      unless unit == "g" || unit == "ml" || unit == food.household_unit
+        raise ApiError.new(400, "unit not usable for this food")
+      end
+      { food_id: c["foodId"], quantity: quantity(c["quantity"]), unit: unit,
+        preparation: optional_trim(c["preparation"], PREP_MAX) }
+    end
+    private_class_method :food_fields
+
+    def self.macro_fields(c, _visible)
+      grams = c["macroGrams"]
+      Input.invalid! unless grams.is_a?(Numeric) && grams > 0 && grams <= MACRO_GRAMS_MAX
+      { macro: enum(c["macro"], MACROS), macro_grams: format("%.2f", grams) }
+    end
+    private_class_method :macro_fields
+
+    def self.portion_fields(c, _visible)
+      count = c["portionCount"]
+      Input.invalid! unless count.is_a?(Numeric) && count > 0 && count <= PORTION_COUNT_MAX
+      { portion_group: enum(c["portionGroup"], PORTION_GROUPS), portion_count: format("%.2f", count) }
+    end
+    private_class_method :portion_fields
+
+    def self.text_fields(c, _visible)
+      { free_text: Input.trimmed(c["freeText"], max: FREE_TEXT_MAX) }
+    end
+    private_class_method :text_fields
+
 
     def self.array(value, min, max)
       Input.invalid! unless value.is_a?(Array) && value.length.between?(min, max)
