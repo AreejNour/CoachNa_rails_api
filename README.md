@@ -63,6 +63,10 @@ bin/rails coach_review:approve PHONE=+201001234567 COMMISSION=15
 bin/rails coach_review:reject PHONE=+201001234567 REASON="Your certificate photo is too blurry to read."
 ```
 
+## Plan template
+
+Coaches can download the CoachNa plan template (the layout that imports best from PDF) at `/templates/coachna-plan-template.docx`, served as a static file from `public/templates/`. `coachna-plan-sample.pdf` in the same folder is a synthetic sample made from it (invented "Sample Client").
+
 ## Coach API
 
 Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error": "..." }`.
@@ -95,8 +99,13 @@ Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error"
 | `GET /coach/clients` | List your subscribers, with which are new |
 | `GET /coach/clients/:id` | One client's health profile and questionnaire answers |
 | `POST /coach/clients/mark-seen` | Mark the new-client notifications read |
+| `GET /coach/portion-sizes` | Your portion sizes (grams of the defining macro per portion) for carb, protein, fat, fruit, dairy |
+| `PUT /coach/portion-sizes` | Set sizes for the groups sent (1-200 g); the standard value clears the override |
+| `POST /coach/subscriptions/:id/plan/import` | Read a plan PDF (multipart `pdf`, optional `replaceDraft=true`) with Claude into the draft; `201 { plan, flagCount }`. `409 draft exists`, `400` not a PDF / over 20 MB / over 60 pages, `422` unreadable, `502` reader unavailable |
 | `GET /coach/notifications/unread-count` | Your unread notification count |
 | `GET /coach/reviews` | Your rating summary and visible client reviews (with visible photos), newest first |
 | `GET /coach/reviews/photos/:id` | A visible review photo of yours (bytes or signed redirect; `Cache-Control: no-store`) |
+
+Plan import sends the PDF (client name, body details) to Anthropic, so the coach terms must say so. It needs `ANTHROPIC_API_KEY`; without it import answers 502. The PDF is stored privately at `plan-imports/<subscription>/<uuid>.pdf` and deleted if the import fails.
 
 No SMS is sent yet. Codes go to the log and, outside production, come back as `devCode`. See `docs/temporary-code-to-remove.md` in the project docs.

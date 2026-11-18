@@ -44,6 +44,10 @@ module CoachApp
     def self.publish!(coach, subscription_id, attrs)
       subscription = find_subscription!(coach, subscription_id)
       input = PlanInput.validate(attrs, Foods.visible_by_id(coach))
+      if flagged?(input)
+        raise ApiError.new(409, "plan has unchecked lines")
+      end
+      sizes = Portions.sizes_for(coach)
       now = Time.current
 
       plan = Plan.transaction do
@@ -62,7 +66,7 @@ module CoachApp
           notes: input[:notes],
           published_at: now,
         )
-        insert_tree!(published, input[:options])
+        insert_tree!(published, input[:options], sizes)
         sub.update!(status: "active")
         notify_plan_ready!(sub, coach, published, version)
         published
@@ -81,7 +85,7 @@ module CoachApp
     end
     private_class_method :next_version
 
-    def self.insert_tree!(plan, options)
+    def self.insert_tree!(plan, options, sizes = nil)
       options.each_with_index do |opt, oi|
         option = PlanOption.create!(plan_id: plan.id, position: oi + 1, label: opt[:label], notes: opt[:notes])
         opt[:meals].each do |meal|
@@ -96,17 +100,39 @@ module CoachApp
             PlanMealComponent.create!(
               plan_meal_id: row.id,
               position: ci + 1,
+              kind: c[:kind],
               food_id: c[:food_id],
               quantity: c[:quantity],
               unit: c[:unit],
               preparation: c[:preparation],
+              macro: c[:macro],
+              macro_grams: snapshot_grams(c, sizes),
+              portion_group: c[:portion_group],
+              portion_count: c[:portion_count],
               free_text: c[:free_text],
+              import_flag: c[:import_flag],
             )
           end
         end
       end
     end
     private_class_method :insert_tree!
+
+    # Publish freezes portion targets (so later size changes don't move a published plan);
+    # drafts (sizes nil) leave them null and track the coach's current sizes.
+    def self.snapshot_grams(component, sizes)
+      return component[:macro_grams] unless component[:kind] == "portion"
+      return nil unless sizes
+
+      grams = Portions.target_grams(component[:portion_group], component[:portion_count], sizes)
+      grams && format("%.2f", grams)
+    end
+    private_class_method :snapshot_grams
+
+    def self.flagged?(input)
+      input[:options].any? { |o| o[:meals].any? { |m| m[:components].any? { |c| c[:import_flag] } } }
+    end
+    private_class_method :flagged?
 
     # Same row shape Node writes from publishPlan (recordClientNotification).
     def self.notify_plan_ready!(subscription, coach, plan, version)

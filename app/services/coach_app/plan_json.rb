@@ -20,7 +20,7 @@ module CoachApp
         position: option.position,
         label: option.label,
         notes: option.notes,
-        meals: option.plan_meals.sort_by { |m| [ SLOT_RANK[m.slot] || 99, m.position, m.id ] }.map { |m| meal(m) }
+        meals: option.plan_meals.sort_by { |m| [ m.position, m.id ] }.map { |m| meal(m) }
       }
     end
 
@@ -40,14 +40,18 @@ module CoachApp
       {
         id: component.id,
         position: component.position,
+        kind: component.kind,
         food: food && { id: food.id, nameAr: food.name_ar, nameEn: food.name_en, group: food.group },
         quantity: component.quantity&.to_s,
         unit: component.unit,
         preparation: component.preparation,
-        freeText: component.free_text
+        macro: component.macro,
+        macroGrams: component.macro_grams&.to_f,
+        portionGroup: component.portion_group,
+        portionCount: component.portion_count&.to_f,
+        freeText: component.free_text,
+        importFlag: component.import_flag
       }
     end
-
-    SLOT_RANK = { "breakfast" => 0, "lunch" => 1, "dinner" => 2, "snack" => 3 }.freeze
   end
 end

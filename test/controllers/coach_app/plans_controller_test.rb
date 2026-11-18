@@ -139,4 +139,95 @@ class CoachApp::PlansControllerTest < ActionDispatch::IntegrationTest
     post "/coach/subscriptions/#{@sub.id}/plan/publish", params: plan_body, headers: token, as: :json
     assert_response :not_found
   end
+
+  def kinds_body(extra = {})
+    plan_body(options: [ { label: "D", meals: [
+      { slot: nil, position: 1, title: "Meal 1", components: [
+        { kind: "food", foodId: @rice.id, quantity: 80, unit: "g", importFlag: extra[:flag] },
+        { kind: "macro", macro: "protein", macroGrams: 30 },
+        { kind: "portion", portionGroup: "carb", portionCount: 2 },
+        { kind: "portion", portionGroup: "vegetable", portionCount: 1 },
+        { kind: "text", freeText: "tea" }
+      ] }
+    ] } ])
+  end
+
+  def comps(plan_id)
+    Plan.find(plan_id).plan_options.first.plan_meals.first.plan_meal_components.order(:position)
+  end
+
+  test "draft with every kind round-trips with exact wire fields and a null slot" do
+    put "/coach/subscriptions/#{@sub.id}/plan/draft", params: kinds_body, headers: auth, as: :json
+    assert_response :ok
+    get "/coach/subscriptions/#{@sub.id}/plan", headers: auth
+    meal = data["plan"]["options"][0]["meals"][0]
+    assert_nil meal["slot"]
+    c = meal["components"]
+    assert_equal %w[food macro portion portion text], c.map { |x| x["kind"] }
+    assert_equal %w[id position kind food quantity unit preparation macro macroGrams portionGroup portionCount freeText importFlag].sort,
+                 c[0].keys.sort
+    assert_equal [ "protein", 30.0 ], [ c[1]["macro"], c[1]["macroGrams"] ]
+    assert_equal [ "carb", 2.0, nil ], [ c[2]["portionGroup"], c[2]["portionCount"], c[2]["macroGrams"] ]
+    assert_equal "tea", c[4]["freeText"]
+  end
+
+  test "a component without kind is inferred" do
+    put "/coach/subscriptions/#{@sub.id}/plan/draft", params: plan_body, headers: auth, as: :json
+    assert_response :ok
+    kinds = data["plan"]["options"][0]["meals"].flat_map { |m| m["components"].map { |x| x["kind"] } }
+    assert_equal %w[food food text], kinds.sort
+  end
+
+  test "draft keeps importFlag" do
+    put "/coach/subscriptions/#{@sub.id}/plan/draft", params: kinds_body(flag: "check qty"), headers: auth, as: :json
+    assert_response :ok
+    assert_equal "check qty", data["plan"]["options"][0]["meals"][0]["components"][0]["importFlag"]
+  end
+
+  test "publish with a flagged line is 409 and writes nothing" do
+    assert_no_difference "Plan.count" do
+      post "/coach/subscriptions/#{@sub.id}/plan/publish", params: kinds_body(flag: "?"), headers: auth, as: :json
+    end
+    assert_response :conflict
+    assert_equal "plan has unchecked lines", response.parsed_body["error"]
+    assert_equal "awaiting_plan", @sub.reload.status
+  end
+
+  test "publish snapshots portion grams from standard and from coach sizes" do
+    post "/coach/subscriptions/#{@sub.id}/plan/publish", params: kinds_body, headers: auth, as: :json
+    assert_response :ok
+    c = comps(data["plan"]["id"])
+    assert_equal 60, c[2].macro_grams.to_i
+    assert_nil c[3].macro_grams
+    assert_equal 30, c[1].macro_grams.to_i
+
+    CoachPortionSize.create!(coach_id: @coach.id, group: "carb", grams_of_macro: 25)
+    post "/coach/subscriptions/#{@sub.id}/plan/publish", params: kinds_body, headers: auth, as: :json
+    assert_response :ok
+    assert_equal 50, comps(data["plan"]["id"])[2].macro_grams.to_i
+  end
+
+  test "draft leaves portion macro_grams null" do
+    put "/coach/subscriptions/#{@sub.id}/plan/draft", params: kinds_body, headers: auth, as: :json
+    assert_nil comps(data["plan"]["id"])[2].macro_grams
+  end
+
+  test "400 for malformed kinds" do
+    bad = lambda do |comp|
+      put "/coach/subscriptions/#{@sub.id}/plan/draft", headers: auth, as: :json,
+          params: plan_body(options: [ { label: "D", meals: [ { position: 1, title: "M", components: [ comp ] } ] } ])
+      assert_response :bad_request, comp.inspect
+    end
+    bad.call({ kind: "macro", macro: "protein", macroGrams: 30, foodId: @rice.id })
+    bad.call({ kind: "macro", macro: "sugar", macroGrams: 30 })
+    bad.call({ kind: "macro", macro: "fat", macroGrams: 5001 })
+    bad.call({ kind: "macro", macro: "fat", macroGrams: 0 })
+    bad.call({ kind: "macro", macro: "fat", macroGrams: 0.004 })
+    bad.call({ kind: "portion", portionGroup: "carb", portionCount: 0.004 })
+    bad.call({ kind: "portion", portionGroup: "carb", portionCount: 21 })
+    bad.call({ kind: "portion", portionGroup: "carb", portionCount: 0 })
+    bad.call({ kind: "portion", portionGroup: "nuts", portionCount: 1 })
+    bad.call({ kind: "text", freeText: "x", importFlag: "y" * 301 })
+    bad.call({ kind: "bogus", freeText: "x" })
+  end
 end

@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict VYxaa8LdTlEQ6ITqt0Ukp3vvwYNdMPWcc5KVTcpXOXilvAKsMJxRjBJry81cNms
+\restrict coachnarails
 
 -- Dumped from database version 16.15
--- Dumped by pg_dump version 16.15
+-- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -17,13 +17,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
---
--- Name: drizzle; Type: SCHEMA; Schema: -; Owner: -
---
-
-CREATE SCHEMA drizzle;
-
 
 --
 -- Name: client_status; Type: TYPE; Schema: public; Owner: -
@@ -65,37 +58,6 @@ CREATE TYPE public.coach_status AS ENUM (
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
-
---
--- Name: __drizzle_migrations; Type: TABLE; Schema: drizzle; Owner: -
---
-
-CREATE TABLE drizzle.__drizzle_migrations (
-    id integer NOT NULL,
-    hash text NOT NULL,
-    created_at bigint
-);
-
-
---
--- Name: __drizzle_migrations_id_seq; Type: SEQUENCE; Schema: drizzle; Owner: -
---
-
-CREATE SEQUENCE drizzle.__drizzle_migrations_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: __drizzle_migrations_id_seq; Type: SEQUENCE OWNED BY; Schema: drizzle; Owner: -
---
-
-ALTER SEQUENCE drizzle.__drizzle_migrations_id_seq OWNED BY drizzle.__drizzle_migrations.id;
-
 
 --
 -- Name: client_addresses; Type: TABLE; Schema: public; Owner: -
@@ -218,6 +180,20 @@ CREATE TABLE public.coach_packages (
     includes jsonb NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: coach_portion_sizes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.coach_portion_sizes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    coach_id uuid NOT NULL,
+    "group" text NOT NULL,
+    grams_of_macro numeric(6,2) NOT NULL,
+    CONSTRAINT coach_portion_sizes_grams_range CHECK (((grams_of_macro > (0)::numeric) AND (grams_of_macro <= (200)::numeric))),
+    CONSTRAINT coach_portion_sizes_group_valid CHECK (("group" = ANY (ARRAY['carb'::text, 'protein'::text, 'fat'::text, 'fruit'::text, 'dairy'::text])))
 );
 
 
@@ -415,8 +391,20 @@ CREATE TABLE public.plan_meal_components (
     unit text,
     preparation text,
     free_text text,
+    kind text NOT NULL,
+    macro text,
+    macro_grams numeric(7,2),
+    portion_group text,
+    portion_count numeric(5,2),
+    import_flag text,
+    CONSTRAINT plan_meal_components_import_flag_len CHECK (((import_flag IS NULL) OR (char_length(import_flag) <= 300))),
+    CONSTRAINT plan_meal_components_kind_valid CHECK ((kind = ANY (ARRAY['food'::text, 'macro'::text, 'portion'::text, 'text'::text]))),
+    CONSTRAINT plan_meal_components_macro_grams_positive CHECK (((macro_grams IS NULL) OR (macro_grams > (0)::numeric))),
+    CONSTRAINT plan_meal_components_macro_valid CHECK (((macro IS NULL) OR (macro = ANY (ARRAY['protein'::text, 'carbs'::text, 'fat'::text])))),
+    CONSTRAINT plan_meal_components_portion_count_range CHECK (((portion_count IS NULL) OR ((portion_count > (0)::numeric) AND (portion_count <= (20)::numeric)))),
+    CONSTRAINT plan_meal_components_portion_group_valid CHECK (((portion_group IS NULL) OR (portion_group = ANY (ARRAY['carb'::text, 'protein'::text, 'fat'::text, 'fruit'::text, 'dairy'::text, 'vegetable'::text])))),
     CONSTRAINT plan_meal_components_quantity_positive CHECK (((quantity IS NULL) OR (quantity > (0)::numeric))),
-    CONSTRAINT plan_meal_components_shape CHECK ((((food_id IS NOT NULL) AND (quantity IS NOT NULL) AND (unit IS NOT NULL) AND (free_text IS NULL)) OR ((food_id IS NULL) AND (quantity IS NULL) AND (unit IS NULL) AND (free_text IS NOT NULL)))),
+    CONSTRAINT plan_meal_components_shape CHECK ((((kind = 'food'::text) AND (food_id IS NOT NULL) AND (quantity IS NOT NULL) AND (unit IS NOT NULL) AND (macro IS NULL) AND (macro_grams IS NULL) AND (portion_group IS NULL) AND (portion_count IS NULL) AND (free_text IS NULL)) OR ((kind = 'macro'::text) AND (macro IS NOT NULL) AND (macro_grams IS NOT NULL) AND (food_id IS NULL) AND (quantity IS NULL) AND (unit IS NULL) AND (preparation IS NULL) AND (portion_group IS NULL) AND (portion_count IS NULL) AND (free_text IS NULL)) OR ((kind = 'portion'::text) AND (portion_group IS NOT NULL) AND (portion_count IS NOT NULL) AND (macro IS NULL) AND (food_id IS NULL) AND (quantity IS NULL) AND (unit IS NULL) AND (preparation IS NULL) AND (free_text IS NULL)) OR ((kind = 'text'::text) AND (free_text IS NOT NULL) AND (food_id IS NULL) AND (quantity IS NULL) AND (unit IS NULL) AND (preparation IS NULL) AND (macro IS NULL) AND (macro_grams IS NULL) AND (portion_group IS NULL) AND (portion_count IS NULL)))),
     CONSTRAINT plan_meal_components_unit_valid CHECK (((unit IS NULL) OR (unit = ANY (ARRAY['g'::text, 'ml'::text, 'piece'::text, 'tbsp'::text, 'tsp'::text, 'cup'::text]))))
 );
 
@@ -428,11 +416,11 @@ CREATE TABLE public.plan_meal_components (
 CREATE TABLE public.plan_meals (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     plan_option_id uuid NOT NULL,
-    slot text NOT NULL,
+    slot text,
     "position" integer NOT NULL,
     title text NOT NULL,
     notes text,
-    CONSTRAINT plan_meals_slot_valid CHECK ((slot = ANY (ARRAY['breakfast'::text, 'lunch'::text, 'dinner'::text, 'snack'::text])))
+    CONSTRAINT plan_meals_slot_valid CHECK (((slot IS NULL) OR (slot = ANY (ARRAY['breakfast'::text, 'lunch'::text, 'dinner'::text, 'snack'::text]))))
 );
 
 
@@ -569,21 +557,6 @@ CREATE TABLE public.weight_logs (
 
 
 --
--- Name: __drizzle_migrations id; Type: DEFAULT; Schema: drizzle; Owner: -
---
-
-ALTER TABLE ONLY drizzle.__drizzle_migrations ALTER COLUMN id SET DEFAULT nextval('drizzle.__drizzle_migrations_id_seq'::regclass);
-
-
---
--- Name: __drizzle_migrations __drizzle_migrations_pkey; Type: CONSTRAINT; Schema: drizzle; Owner: -
---
-
-ALTER TABLE ONLY drizzle.__drizzle_migrations
-    ADD CONSTRAINT __drizzle_migrations_pkey PRIMARY KEY (id);
-
-
---
 -- Name: client_addresses client_addresses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -661,6 +634,14 @@ ALTER TABLE ONLY public.coach_documents
 
 ALTER TABLE ONLY public.coach_packages
     ADD CONSTRAINT coach_packages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: coach_portion_sizes coach_portion_sizes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coach_portion_sizes
+    ADD CONSTRAINT coach_portion_sizes_pkey PRIMARY KEY (id);
 
 
 --
@@ -892,6 +873,13 @@ CREATE INDEX coach_packages_coach_active_idx ON public.coach_packages USING btre
 
 
 --
+-- Name: coach_portion_sizes_coach_group; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX coach_portion_sizes_coach_group ON public.coach_portion_sizes USING btree (coach_id, "group");
+
+
+--
 -- Name: coach_reviews_coach_status_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1108,6 +1096,14 @@ ALTER TABLE ONLY public.coach_packages
 
 
 --
+-- Name: coach_portion_sizes coach_portion_sizes_coach_id_coaches_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coach_portion_sizes
+    ADD CONSTRAINT coach_portion_sizes_coach_id_coaches_id_fk FOREIGN KEY (coach_id) REFERENCES public.coaches(id) ON DELETE CASCADE;
+
+
+--
 -- Name: coach_refresh_tokens coach_refresh_tokens_coach_id_coaches_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1303,5 +1299,5 @@ ALTER TABLE ONLY public.weight_logs
 -- PostgreSQL database dump complete
 --
 
-\unrestrict VYxaa8LdTlEQ6ITqt0Ukp3vvwYNdMPWcc5KVTcpXOXilvAKsMJxRjBJry81cNms
+\unrestrict coachnarails
 
