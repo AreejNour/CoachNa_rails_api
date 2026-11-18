@@ -9,7 +9,7 @@ class CoachApp::ReviewsControllerTest < ActionDispatch::IntegrationTest
   def data = response.parsed_body["data"]
 
   def make_client(n, name)
-    Client.create!(phone: "+20101234810#{n}", password_hash: "h", full_name: name)
+    Client.create!(phone: "+2010123481#{n.to_s.rjust(2, "0")}", password_hash: "h", full_name: name)
   end
 
   def make_sub(coach, client, plan_name)
@@ -25,8 +25,8 @@ class CoachApp::ReviewsControllerTest < ActionDispatch::IntegrationTest
                         body: body, status: status, created_at: at)
   end
 
-  def photo(rev, kind, status: "visible")
-    ReviewPhoto.create!(review_id: rev.id, kind: kind, storage_key: "k/#{SecureRandom.hex(4)}",
+  def photo(rev, kind, status: "visible", key: "k/#{SecureRandom.hex(4)}")
+    ReviewPhoto.create!(review_id: rev.id, kind: kind, storage_key: key,
                         consent_given_at: Time.current, status: status)
   end
 
@@ -82,5 +82,67 @@ class CoachApp::ReviewsControllerTest < ActionDispatch::IntegrationTest
     review(make_client(1, "  Nour   Hassan  "), 1.day.ago)
     get "/coach/reviews", headers: auth
     assert_equal "Nour", data["reviews"][0]["reviewerFirstName"]
+  end
+
+  JPEG_BYTES = "\xFF\xD8\xFF\xE0\x00\x10JFIF".b
+
+  def stored_photo(rev, kind: "before", ext: "jpg", status: "visible", bytes: JPEG_BYTES)
+    key = "reviews/#{rev.id}/#{SecureRandom.hex(4)}.#{ext}"
+    Storage.current.put(key, bytes, mime_type: "application/octet-stream")
+    photo(rev, kind, status: status, key: key)
+  end
+
+  def visible_review(coach: @coach, status: "visible")
+    @n = (@n || 10) + 1
+    review(make_client(@n, "Nour Hassan"), 1.day.ago, coach: coach, status: status)
+  end
+
+  test "photo needs a token" do
+    get "/coach/reviews/photos/#{SecureRandom.uuid}"
+    assert_response :unauthorized
+  end
+
+  test "serves a visible photo of a visible review with its bytes, type and no-store" do
+    p = stored_photo(visible_review)
+    get "/coach/reviews/photos/#{p.id}", headers: auth
+    assert_response :ok
+    assert_equal JPEG_BYTES, response.body.b
+    assert_includes response.media_type, "image/jpeg"
+    assert_equal "no-store", response.headers["Cache-Control"]
+  end
+
+  test "infers the content type from the key extension" do
+    { "png" => "image/png", "webp" => "image/webp", "jpeg" => "image/jpeg", "bin" => "application/octet-stream" }.each do |ext, mime|
+      rev = visible_review
+      get "/coach/reviews/photos/#{stored_photo(rev, ext: ext).id}", headers: auth
+      assert_response :ok
+      assert_equal mime, response.media_type
+    end
+  end
+
+  test "a photo url from the list fetches successfully" do
+    stored_photo(visible_review)
+    get "/coach/reviews", headers: auth
+    url = data["reviews"][0]["photos"][0]["url"]
+    get url, headers: auth
+    assert_response :ok
+    assert_equal JPEG_BYTES, response.body.b
+  end
+
+  test "photo is 404 when pending, hidden, on a non-visible review, another coach's, unknown, or file missing" do
+    rev = visible_review
+    other = Coach.create!(phone: "+201012348003", password_hash: "h", full_name: "Other")
+    missing = photo(visible_review, "after", key: "reviews/gone/none.jpg")
+    ids = [ stored_photo(rev, status: "pending").id,
+            stored_photo(rev, kind: "after", status: "hidden").id,
+            stored_photo(visible_review(status: "pending")).id,
+            stored_photo(visible_review(status: "hidden")).id,
+            stored_photo(visible_review(coach: other)).id,
+            SecureRandom.uuid,
+            missing.id ]
+    ids.each do |id|
+      get "/coach/reviews/photos/#{id}", headers: auth
+      assert_response :not_found, "expected 404 for #{id}"
+    end
   end
 end
