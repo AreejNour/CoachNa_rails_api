@@ -63,6 +63,10 @@ bin/rails coach_review:approve PHONE=+201001234567 COMMISSION=15
 bin/rails coach_review:reject PHONE=+201001234567 REASON="Your certificate photo is too blurry to read."
 ```
 
+## Plan template
+
+Coaches can download the CoachNa plan template (the layout that imports best from PDF) at `/templates/coachna-plan-template.docx`, served as a static file from `public/templates/`. `coachna-plan-sample.pdf` in the same folder is a synthetic sample made from it (invented "Sample Client").
+
 ## Coach API
 
 Responses are `{ "success": true, "data": ... }` or `{ "success": false, "error": "..." }`.
