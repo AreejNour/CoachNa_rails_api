@@ -83,7 +83,7 @@ class CoachApp::QuestionnaireControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a bad body is a 400 validation failed" do
-    post "/coach/questionnaire/questions", params: body(type: "photo"), headers: auth, as: :json
+    post "/coach/questionnaire/questions", params: body(type: "audio"), headers: auth, as: :json
     assert_response :bad_request
     assert_equal({ "success" => false, "error" => "validation failed" }, response.parsed_body)
   end

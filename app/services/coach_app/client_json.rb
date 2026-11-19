@@ -42,6 +42,7 @@ module CoachApp
 
     def self.question_json(answered)
       question = answered[:question]
+      photo = question.type == "photo"
       {
         id: question.id,
         position: question.position,
@@ -49,8 +50,8 @@ module CoachApp
         label: question.label,
         options: question.options,
         required: question.required,
-        answer: answered[:answer]
-      }
+        answer: photo ? nil : answered[:answer]
+      }.tap { |json| json[:photo] = answered[:photo_storage_key].present? if photo }
     end
     private_class_method :question_json
   end
