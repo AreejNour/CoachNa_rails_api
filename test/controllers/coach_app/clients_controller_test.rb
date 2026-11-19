@@ -78,4 +78,18 @@ class CoachApp::ClientsControllerTest < ActionDispatch::IntegrationTest
     get "/coach/notifications/unread-count", headers: auth
     assert_equal 0, data["count"]
   end
+
+  test "a pending_payment subscription is not listed, not counted, and its detail is 404" do
+    unpaid = make_sub(make_client("Unpaid"))
+    unpaid.update!(status: "pending_payment")
+    new_note(@coach, unpaid.id)
+
+    get "/coach/clients", headers: auth
+    assert_response :ok
+    assert_empty data["clients"]
+    assert_equal 0, data["newCount"]
+
+    get "/coach/clients/#{unpaid.id}", headers: auth
+    assert_response :not_found
+  end
 end

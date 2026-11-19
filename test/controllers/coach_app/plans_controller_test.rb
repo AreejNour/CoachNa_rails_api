@@ -230,4 +230,16 @@ class CoachApp::PlansControllerTest < ActionDispatch::IntegrationTest
     bad.call({ kind: "text", freeText: "x", importFlag: "y" * 301 })
     bad.call({ kind: "bogus", freeText: "x" })
   end
+
+  test "a pending_payment subscription's plan is 404 to read, save and publish" do
+    unpaid = make_sub("pending_payment", client: another_client)
+
+    get "/coach/subscriptions/#{unpaid.id}/plan", headers: auth
+    assert_response :not_found
+    put "/coach/subscriptions/#{unpaid.id}/plan/draft", params: plan_body, headers: auth, as: :json
+    assert_response :not_found
+    publish(unpaid)
+    assert_response :not_found
+    assert_equal 0, Plan.where(subscription_id: unpaid.id).count
+  end
 end

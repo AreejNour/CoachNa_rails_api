@@ -3,10 +3,10 @@ module CoachApp
   # profile and questionnaire answers. Everything is reached through the coach's own subscriptions,
   # so a coach only ever sees their own clients.
   module Clients
-    CURRENT_STATUSES = %w[pending_payment awaiting_questionnaire awaiting_plan active].freeze
+    CURRENT_STATUSES = %w[awaiting_questionnaire awaiting_plan active].freeze
 
     def self.list(coach)
-      subscriptions = coach.subscriptions
+      subscriptions = Subscriptions.visible_to_coach(coach)
                            .where(status: CURRENT_STATUSES)
                            .order(created_at: :desc)
                            .includes(:client)
@@ -16,7 +16,7 @@ module CoachApp
     end
 
     def self.detail(coach, subscription_id)
-      subscription = coach.subscriptions.find_by(id: subscription_id) ||
+      subscription = Subscriptions.visible_to_coach(coach).find_by(id: subscription_id) ||
         raise(ApiError.new(404, "client not found"))
       health = ClientHealthProfile.find_by(client_id: subscription.client_id)
       ClientJson.detail(subscription, health, answered_questions(coach, subscription))

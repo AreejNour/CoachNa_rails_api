@@ -75,7 +75,7 @@ module CoachApp
     end
 
     def self.find_subscription!(coach, subscription_id)
-      coach.subscriptions.find_by(id: subscription_id) ||
+      Subscriptions.visible_to_coach(coach).find_by(id: subscription_id) ||
         raise(ApiError.new(404, "client not found"))
     end
     private_class_method :find_subscription!
