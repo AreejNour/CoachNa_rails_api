@@ -4,7 +4,7 @@ module CoachApp
   # only ever touches their own. The `questionnaires` and `questionnaire_questions` tables are shared
   # with the Node API, which reads non-archived questions, in position order, for the client app.
   module Questions
-    TYPES = %w[text number single_choice multi_choice yes_no date].freeze
+    TYPES = %w[text number single_choice multi_choice yes_no date photo].freeze
     CHOICE_TYPES = %w[single_choice multi_choice].freeze
     LABEL_MAX = 200
     OPTIONS_MIN = 2
@@ -68,7 +68,7 @@ module CoachApp
     end
     private_class_method :valid_required
 
-    # Choice types need 2–20 options with unique, non-empty labels; other types carry none.
+    # Choice types need 2–20 options with unique, non-empty labels; other types (photo included) carry none.
     # Each option keeps the key it was sent with (so a relabel never changes a past answer) and a
     # new option gets a fresh key.
     def self.valid_options(raw, type)

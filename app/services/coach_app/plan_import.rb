@@ -15,7 +15,7 @@ module CoachApp
 
     # Returns { plan:, flag_count: }.
     def self.call(coach, subscription_id, file, replace:)
-      subscription = coach.subscriptions.find_by(id: subscription_id) ||
+      subscription = Subscriptions.visible_to_coach(coach).find_by(id: subscription_id) ||
                      raise(ApiError.new(404, "client not found"))
       bytes = checked_bytes(file)
       if !replace && Plan.exists?(subscription_id: subscription.id, status: "draft")

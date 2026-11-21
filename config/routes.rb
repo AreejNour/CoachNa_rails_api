@@ -43,6 +43,7 @@ Rails.application.routes.draw do
     get "conversations/:id/messages", to: "conversations#messages"
     post "conversations/:id/messages", to: "conversations#send_message"
     post "conversations/:id/photo", to: "conversations#send_photo"
+    get "clients/:id/answers/:question_id/photo", to: "clients#answer_photo"
     get "conversations/:id/messages/:message_id/photo", to: "conversations#photo"
     post "conversations/:id/read", to: "conversations#read"
     get "notifications/unread-count", to: "notifications#unread_count"

@@ -110,7 +110,7 @@ class CoachApp::QuestionsTest < ActiveSupport::TestCase
       text_attrs("label" => ""),
       text_attrs("label" => "x" * 201),
       text_attrs("type" => "unknown"),
-      text_attrs("type" => "photo"),
+      text_attrs("type" => "audio"),
       text_attrs("required" => "yes"),
       choice_attrs("options" => nil),
       choice_attrs("options" => []),
@@ -131,5 +131,17 @@ class CoachApp::QuestionsTest < ActiveSupport::TestCase
   test "an empty patch is rejected" do
     q = CoachApp::Questions.create!(@coach, text_attrs)
     assert_raises(ApiError) { CoachApp::Questions.update!(@coach, q.id, {}) }
+  end
+
+  test "a photo question is created with no options" do
+    q = CoachApp::Questions.create!(@coach, { "type" => "photo", "label" => "Front photo" })
+    assert_equal "photo", q.type
+    assert_nil q.options
+  end
+
+  test "a photo question with options is invalid" do
+    assert_raises(ApiError) do
+      CoachApp::Questions.create!(@coach, { "type" => "photo", "label" => "P", "options" => [ { "label" => "A" }, { "label" => "B" } ] })
+    end
   end
 end

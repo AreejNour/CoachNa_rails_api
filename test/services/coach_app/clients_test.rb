@@ -111,4 +111,26 @@ class CoachApp::ClientsTest < ActiveSupport::TestCase
     assert_equal 0, CoachApp::Notifications.unread_count(@coach)
     assert_equal 1, CoachApp::Notifications.unread_count(other)
   end
+
+  test "list never includes a pending_payment subscription and newCount ignores it" do
+    paid = make_subscription(make_client("Paid"))
+    unpaid = make_subscription(make_client("Unpaid"), status: "pending_payment")
+    failed = make_subscription(make_client("Failed"), status: "payment_failed")
+    new_client_note(@coach, paid.id, read_at: Time.current)
+    new_client_note(@coach, unpaid.id)
+    new_client_note(@coach, failed.id)
+
+    result = CoachApp::Clients.list(@coach)
+    assert_equal [ "Paid" ], result[:clients].map { |c| c[:fullName] }
+    assert_equal 0, result[:newCount]
+  end
+
+  %w[pending_payment payment_failed].each do |status|
+    test "detail of a #{status} subscription is 404 client not found" do
+      unpaid = make_subscription(make_client("Unpaid"), status: status)
+      error = assert_raises(ApiError) { CoachApp::Clients.detail(@coach, unpaid.id) }
+      assert_equal 404, error.status
+      assert_equal "client not found", error.message
+    end
+  end
 end
