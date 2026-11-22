@@ -39,6 +39,7 @@ Rails.application.routes.draw do
     post "subscriptions/:subscription_id/plan/import", to: "plan_imports#create"
     get "reviews", to: "reviews#index"
     get "reviews/photos/:id", to: "reviews#photo"
+    get "earnings", to: "earnings#show"
     get "conversations", to: "conversations#index"
     get "conversations/:id/messages", to: "conversations#messages"
     post "conversations/:id/messages", to: "conversations#send_message"
