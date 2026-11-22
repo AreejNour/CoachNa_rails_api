@@ -64,7 +64,9 @@ class SharedDbDevelopmentServerTest < ActiveSupport::TestCase
   test "the development server doesn't check for pending migrations" do
     output = IO.popen(
       { "RAILS_ENV" => "development" },
-      [ "bin/rails", "runner", "print Rails.application.config.middleware.include?(ActiveRecord::Migration::CheckPending)" ],
+      # Launch via the Ruby interpreter, not the bare `bin/rails` shebang script, so this runs on
+      # Windows too (Windows can't exec a shebang script directly: Errno::ENOEXEC).
+      [ Gem.ruby, "bin/rails", "runner", "print Rails.application.config.middleware.include?(ActiveRecord::Migration::CheckPending)" ],
       chdir: Rails.root, err: File::NULL, &:read
     )
 
