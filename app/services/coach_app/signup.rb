@@ -23,7 +23,7 @@ module CoachApp
       code = normalized_code(code)
       password = Input.password(password)
       full_name = Input.full_name(full_name)
-      email = Input.email(email) unless email.nil?
+      email = Input.email(email)
       e164 = Input.phone(phone, country)
       refuse_registered(e164)
 

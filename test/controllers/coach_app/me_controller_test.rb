@@ -70,4 +70,40 @@ class CoachApp::MeControllerTest < ActionDispatch::IntegrationTest
 
     assert_unauthorized
   end
+
+  # --- PUT /coach/me/email
+
+  def put_email(email, token: CoachApp::AccessToken.sign(@coach.id))
+    put "/coach/me/email", as: :json, headers: { "Authorization" => bearer(token) }, params: { email: email }
+  end
+
+  test "sets the email in every status and leaves the phone login alone" do
+    %w[incomplete pending_review approved rejected suspended deactivated].each_with_index do |status, i|
+      @coach.update_columns(status: status)
+      put_email("karim#{i}@example.com")
+
+      assert_response :ok, status
+      assert_equal "karim#{i}@example.com", response.parsed_body["data"]["coach"]["email"]
+      assert_equal "karim#{i}@example.com", @coach.reload.email
+      assert_equal "+201012345682", @coach.phone
+    end
+  end
+
+  test "a taken email is 409" do
+    Coach.create!(phone: "+201012345683", email: "taken@example.com", password_hash: "x", full_name: "Other")
+    put_email("taken@example.com")
+
+    assert_response :conflict
+    assert_equal({ "success" => false, "error" => "email already registered" }, response.parsed_body)
+  end
+
+  test "a bad email is 400 and requires a coach" do
+    [ "nope", "", nil, 5 ].each do |value|
+      put_email(value)
+
+      assert_response :bad_request
+    end
+    put "/coach/me/email", as: :json, params: { email: "a@b.co" }
+    assert_response :unauthorized
+  end
 end

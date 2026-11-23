@@ -10,6 +10,9 @@ Rails.application.routes.draw do
     post "auth/refresh", to: "sessions#refresh"
     post "auth/logout", to: "sessions#logout"
     get "me", to: "me#show"
+    put "me/email", to: "me#update_email"
+    post "devices", to: "devices#create"
+    delete "devices/:token", to: "devices#destroy", constraints: { token: /[^\/]+/ }
     patch "profile", to: "profiles#update"
     get "profile/status", to: "review#status"
     post "profile/submit", to: "review#submit"
