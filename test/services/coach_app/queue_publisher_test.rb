@@ -7,7 +7,8 @@ class CoachApp::QueuePublisherTest < ActiveSupport::TestCase
     def initialize = @confirms = true
     def open? = true
     def confirm_select = nil
-    def wait_for_confirms = confirms
+    def wait_for_confirms = (sleep(5) if hangs; confirms)
+    attr_accessor :hangs
   end
 
   class FakeSession
@@ -78,6 +79,21 @@ class CoachApp::QueuePublisherTest < ActiveSupport::TestCase
 
     with_fakes(exchange: exchange) do
       assert_raises(RuntimeError) { CoachApp::QueuePublisher.publish(routing_key: "push", body: "{}") }
+    end
+  end
+
+  test "a hanging confirm raises within the bound, resets the session, then cools down" do
+    CoachApp::QueuePublisher.instance_variable_set(:@default, CoachApp::QueuePublisher::AmqpAdapter.new(timeout: 0.2))
+    @session.channel.hangs = true
+
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    with_fakes do
+      assert_raises(Timeout::Error) { CoachApp::QueuePublisher.publish(routing_key: "push", body: "{}") }
+      assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2
+      assert @session.closed
+
+      error = assert_raises(RuntimeError) { CoachApp::QueuePublisher.publish(routing_key: "push", body: "{}") }
+      assert_match(/cooling down/, error.message)
     end
   end
 end

@@ -12,14 +12,27 @@ module CoachApp
     # Publishes a persistent, mandatory message and waits for the broker's confirm. Raises on a
     # timeout, an unconfirmed publish or an unroutable (returned) message.
     class AmqpAdapter
+      COOLDOWN = 5
+
+      def initialize(timeout: TIMEOUT)
+        @timeout = timeout
+      end
+
       def publish(exchange:, routing_key:, body:)
+        # After a failure, skip the broker for a moment so threads don't queue behind a dead one.
+        # The rows stay unpublished and Node's sweeper sends them.
+        raise "broker unavailable (cooling down)" if @down_until && Process.clock_gettime(Process::CLOCK_MONOTONIC) < @down_until
+
         ensure_channel
         @returned = false
         @exchange.publish(body, routing_key: routing_key, persistent: true, mandatory: true)
-        confirmed = Timeout.timeout(TIMEOUT) { @channel.wait_for_confirms }
+        # Timeout interrupts the wait at an arbitrary point; that is safe only because the
+        # rescue below always calls reset, which drops the channel and connection.
+        confirmed = Timeout.timeout(@timeout) { @channel.wait_for_confirms }
         raise "publish not confirmed" unless confirmed
         raise "publish returned as unroutable" if @returned
       rescue StandardError
+        @down_until = Process.clock_gettime(Process::CLOCK_MONOTONIC) + COOLDOWN
         reset
         raise
       end
@@ -32,7 +45,8 @@ module CoachApp
         reset
         @connection = Bunny.new(
           ENV.fetch("RABBITMQ_URL", "amqp://guest:guest@localhost:5672"),
-          automatically_recover: true, connection_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT
+          automatically_recover: false, connection_timeout: @timeout, read_timeout: @timeout,
+          write_timeout: @timeout, continuation_timeout: (@timeout * 1000).to_i
         )
         @connection.start
         @channel = @connection.create_channel
@@ -43,7 +57,8 @@ module CoachApp
       end
 
       def reset
-        @connection&.close
+        connection = @connection
+        Timeout.timeout(@timeout) { connection&.close }
       rescue StandardError
         nil
       ensure
