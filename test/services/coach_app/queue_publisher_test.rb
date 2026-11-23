@@ -3,12 +3,11 @@ require "test_helper"
 # Exercises the real adapter path (no adapter= override) against a fake Bunny.
 class CoachApp::QueuePublisherTest < ActiveSupport::TestCase
   class FakeChannel
-    attr_accessor :confirms
+    attr_accessor :confirms, :hangs
     def initialize = @confirms = true
     def open? = true
     def confirm_select = nil
     def wait_for_confirms = (sleep(5) if hangs; confirms)
-    attr_accessor :hangs
   end
 
   class FakeSession
@@ -31,6 +30,7 @@ class CoachApp::QueuePublisherTest < ActiveSupport::TestCase
   end
 
   setup do
+    @saved_default = CoachApp::QueuePublisher.instance_variable_get(:@default)
     @saved = CoachApp::QueuePublisher.instance_variable_get(:@adapter)
     CoachApp::QueuePublisher.adapter = nil
     CoachApp::QueuePublisher.instance_variable_set(:@default, nil)
@@ -41,7 +41,7 @@ class CoachApp::QueuePublisherTest < ActiveSupport::TestCase
   end
 
   teardown do
-    CoachApp::QueuePublisher.instance_variable_set(:@default, nil)
+    CoachApp::QueuePublisher.instance_variable_set(:@default, @saved_default)
     CoachApp::QueuePublisher.adapter = @saved
   end
 
@@ -94,6 +94,30 @@ class CoachApp::QueuePublisherTest < ActiveSupport::TestCase
 
       error = assert_raises(RuntimeError) { CoachApp::QueuePublisher.publish(routing_key: "push", body: "{}") }
       assert_match(/cooling down/, error.message)
+    end
+  end
+
+  test "the cooldown fails fast without extending, then expires and a real attempt happens" do
+    adapter = CoachApp::QueuePublisher::AmqpAdapter.new
+    clock = 100.0
+    adapter.define_singleton_method(:now) { clock }
+    CoachApp::QueuePublisher.instance_variable_set(:@default, adapter)
+    @session.channel.confirms = false
+
+    with_fakes do
+      assert_raises(RuntimeError) { CoachApp::QueuePublisher.publish(routing_key: "push", body: "{}") }
+      attempts = @exchange.published.size
+
+      clock = 104.0
+      error = assert_raises(RuntimeError) { CoachApp::QueuePublisher.publish(routing_key: "push", body: "{}") }
+      assert_match(/cooling down/, error.message)
+      assert_equal attempts, @exchange.published.size
+
+      # Still 5 s after the first failure (not the second call), so the window has expired.
+      clock = 105.5
+      @session.channel.confirms = true
+      CoachApp::QueuePublisher.publish(routing_key: "push", body: "{}")
+      assert_equal attempts + 1, @exchange.published.size
     end
   end
 end

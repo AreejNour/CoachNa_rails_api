@@ -20,9 +20,18 @@ module CoachApp
 
       def publish(exchange:, routing_key:, body:)
         # After a failure, skip the broker for a moment so threads don't queue behind a dead one.
-        # The rows stay unpublished and Node's sweeper sends them.
-        raise "broker unavailable (cooling down)" if @down_until && Process.clock_gettime(Process::CLOCK_MONOTONIC) < @down_until
+        # The rows stay unpublished and Node's sweeper sends them. This check is outside the
+        # rescued attempt, so a cooling-down call neither extends the window nor resets.
+        raise "broker unavailable (cooling down)" if @down_until && now < @down_until
 
+        attempt(exchange: exchange, routing_key: routing_key, body: body)
+      end
+
+      private
+
+      def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+      def attempt(exchange:, routing_key:, body:)
         ensure_channel
         @returned = false
         @exchange.publish(body, routing_key: routing_key, persistent: true, mandatory: true)
@@ -32,12 +41,10 @@ module CoachApp
         raise "publish not confirmed" unless confirmed
         raise "publish returned as unroutable" if @returned
       rescue StandardError
-        @down_until = Process.clock_gettime(Process::CLOCK_MONOTONIC) + COOLDOWN
+        @down_until = now + COOLDOWN
         reset
         raise
       end
-
-      private
 
       def ensure_channel
         return if @channel&.open? && @connection&.open?
