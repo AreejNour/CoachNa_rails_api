@@ -6,6 +6,14 @@ module CoachApp
       OutboxMessage.create!(kind: kind, payload: payload).id
     end
 
+    # For callers that publish right after their write: the publish waits for the outermost
+    # transaction to commit (or runs now with none open), and never runs on a rollback.
+    def self.enqueue_and_publish_after_commit!(kind:, payload:)
+      id = enqueue!(kind: kind, payload: payload)
+      ActiveRecord.after_all_transactions_commit { publish_after_commit([ id ]) }
+      id
+    end
+
     def self.publish_after_commit(ids)
       OutboxMessage.where(id: Array(ids)).find_each do |row|
         QueuePublisher.publish(routing_key: row.kind, body: { outboxId: row.id }.to_json)

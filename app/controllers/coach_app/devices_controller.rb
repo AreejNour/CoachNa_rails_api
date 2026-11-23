@@ -18,7 +18,7 @@ module CoachApp
     end
 
     def destroy
-      DeviceToken.where(token: params[:token], owner_type: "coach", owner_id: current_coach.id).delete_all
+      DeviceToken.where(token: params[:token].to_s.strip, owner_type: "coach", owner_id: current_coach.id).delete_all
       render_success({})
     end
   end

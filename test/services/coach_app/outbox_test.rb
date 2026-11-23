@@ -66,4 +66,34 @@ class CoachApp::OutboxTest < ActiveSupport::TestCase
     end
     assert_empty publisher.published
   end
+
+  test "enqueue_and_publish_after_commit! publishes only after the outermost commit" do
+    id = nil
+    ActiveRecord::Base.transaction do
+      ActiveRecord::Base.transaction(requires_new: true) do
+        id = CoachApp::Outbox.enqueue_and_publish_after_commit!(kind: "push", payload: {})
+      end
+      assert_empty publisher.published
+    end
+
+    assert_equal 1, publisher.published.size
+    assert_not_nil OutboxMessage.find(id).published_at
+  end
+
+  test "enqueue_and_publish_after_commit! publishes nothing on a rollback" do
+    ActiveRecord::Base.transaction do
+      CoachApp::Outbox.enqueue_and_publish_after_commit!(kind: "push", payload: {})
+      raise ActiveRecord::Rollback
+    end
+
+    assert_empty publisher.published
+    assert_equal 0, OutboxMessage.count
+  end
+
+  test "enqueue_and_publish_after_commit! publishes at once with no transaction open" do
+    id = CoachApp::Outbox.enqueue_and_publish_after_commit!(kind: "email", payload: {})
+
+    assert_equal 1, publisher.published.size
+    assert_not_nil OutboxMessage.find(id).published_at
+  end
 end
