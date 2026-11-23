@@ -45,3 +45,5 @@ group :development, :test do
 end
 
 gem "anthropic", "~> 2.10"
+
+gem "bunny", "~> 2.23"

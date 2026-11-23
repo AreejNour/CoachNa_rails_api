@@ -95,6 +95,38 @@ class CoachApp::ReviewControllerTest < ActionDispatch::IntegrationTest
     assert_nil @coach.rejection_reason
   end
 
+  test "submit enqueues one received email" do
+    @coach.update!(email: "sara@example.com")
+    complete_everything
+
+    submit
+
+    rows = OutboxMessage.where(kind: "email")
+    assert_equal 1, rows.count
+    assert_equal({ "to" => "sara@example.com", "template" => "coach_application_received",
+                   "data" => { "firstName" => "Sara" } }, rows.first.payload)
+  end
+
+  test "submit without an email skips the email and still succeeds" do
+    complete_everything
+
+    submit
+
+    assert_response :success
+    assert_equal 0, OutboxMessage.count
+  end
+
+  test "a failure after submitting rolls back the email row and the status" do
+    @coach.update!(email: "sara@example.com")
+    complete_everything
+
+    swap_method(CoachApp::Outbox, :enqueue_and_publish_after_commit!, ->(**) { raise "boom" }) do
+      assert_raises(RuntimeError) { CoachApp::ReviewStatus.submit!(@coach) }
+    end
+    assert_equal "incomplete", @coach.reload.status
+    assert_equal 0, OutboxMessage.count
+  end
+
   test "submit with something missing is refused and changes nothing" do
     complete_profile
     add_document("profile_photo")

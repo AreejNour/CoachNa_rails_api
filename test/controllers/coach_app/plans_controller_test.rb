@@ -76,6 +76,40 @@ class CoachApp::PlansControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "subscriptionId" => @sub.id, "planId" => plan.id }, note.data)
   end
 
+  test "publish enqueues one plan push for the client, published after commit" do
+    CoachApp::QueuePublisher.adapter = CoachApp::QueuePublisher::TestAdapter.new
+    publish
+
+    rows = OutboxMessage.where(kind: "push")
+    assert_equal 1, rows.count
+    assert_equal(
+      { "recipient" => { "type" => "client", "id" => @client.id },
+        "title" => { "ar" => "خطتك جاهزة", "en" => "Your plan is ready" },
+        "body" => { "ar" => "نشر #{@coach.full_name} خطتك. افتحها لترى وجبات اليوم.",
+                    "en" => "#{@coach.full_name} published your plan. Open it to see today's meals." },
+        "data" => { "screen" => "plan" } },
+      rows.first.payload,
+    )
+    assert_equal 1, CoachApp::QueuePublisher.adapter.published.size
+  ensure
+    CoachApp::QueuePublisher.adapter = nil
+  end
+
+  test "a second publish pushes the updated title" do
+    publish
+    publish(@sub, notes: "v2")
+
+    titles = OutboxMessage.where(kind: "push").order(:created_at).map { |r| r.payload["title"]["en"] }
+    assert_equal [ "Your plan is ready", "Your plan was updated" ], titles
+  end
+
+  test "a failure writing the notification leaves no push row" do
+    swap_method(Notification, :create!, ->(*) { raise "boom" }) do
+      publish
+    end
+    assert_equal 0, OutboxMessage.count
+  end
+
   test "a second publish replaces the first (version 2) and the notification says updated" do
     publish
     first_id = data["plan"]["id"]
