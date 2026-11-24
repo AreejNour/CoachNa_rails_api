@@ -4,14 +4,11 @@ module CoachApp
   # and deletes the stored file; on success the PDF stays, private to the coach.
   module PlanImport
     MAX_BYTES = 20_000_000
-    MAX_PAGES = 60
-    PDF_MAGIC = "%PDF-".b
     UNREADABLE = "couldn't read a plan in this file".freeze
 
-    # The reader got an answer but there is no plan to use (refusal, cut off, not JSON).
-    class Unreadable < StandardError; end
-    # The reader could not get an answer (no key, network, API error).
-    class Unavailable < StandardError; end
+    Unreadable = ClaudeJson::Unreadable
+    Unavailable = ClaudeJson::Unavailable
+    UNAVAILABLE = "couldn't reach the plan reader, try again".freeze
 
     # Returns { plan:, flag_count: }.
     def self.call(coach, subscription_id, file, replace:)
@@ -33,39 +30,26 @@ module CoachApp
     end
 
     def self.read_and_save(coach, subscription, bytes)
-      foods = Foods.visible_by_id(coach)
-      raw = Reader.call(bytes, foods.values)
-      normalized = Normalizer.call(raw, foods)
-      raise ApiError.new(422, UNREADABLE) if normalized[:options].empty?
+      ClaudeJson.mapping_errors("plan import", unreadable: UNREADABLE, unavailable: UNAVAILABLE) do
+        foods = Foods.visible_by_id(coach)
+        raw = Reader.call(bytes, foods.values)
+        normalized = Normalizer.call(raw, foods)
+        raise ApiError.new(422, UNREADABLE) if normalized[:options].empty?
 
-      attrs = { "notes" => normalized[:notes], "options" => normalized[:options] }
-      { plan: Plans.save_draft!(coach, subscription.id, attrs), flag_count: normalized[:flag_count] }
-    rescue Unreadable => e
-      Rails.logger.warn("plan import unreadable: #{e.message}")
-      raise ApiError.new(422, UNREADABLE)
-    rescue Unavailable => e
-      Rails.logger.error("plan import reader unavailable: #{e.message}")
-      raise ApiError.new(502, "couldn't reach the plan reader, try again")
+        attrs = { "notes" => normalized[:notes], "options" => normalized[:options] }
+        { plan: Plans.save_draft!(coach, subscription.id, attrs), flag_count: normalized[:flag_count] }
+      end
     end
     private_class_method :read_and_save
 
     def self.checked_bytes(file)
-      raise ApiError.new(400, "pdf is required") unless file.respond_to?(:read) && file.respond_to?(:size)
-      raise ApiError.new(400, "file too large") if file.size > MAX_BYTES
+      bytes = ImportFile.read(file, max_bytes: MAX_BYTES, not_a_file: "pdf is required")
+      raise ApiError.new(400, "file content does not match its type") unless ImportFile.pdf?(bytes)
 
-      bytes = file.read.to_s.b
-      raise ApiError.new(400, "file content does not match its type") unless bytes.start_with?(PDF_MAGIC)
-      raise ApiError.new(400, "pdf has more than #{MAX_PAGES} pages") if page_count(bytes) > MAX_PAGES
-
+      ImportFile.check_pdf_pages!(bytes)
       bytes
     end
     private_class_method :checked_bytes
-
-    # Cheap and dependency-free: counts page objects (not the /Pages tree). Pages hidden in
-    # compressed object streams are not seen, so this can undercount; the API caps pages too.
-    def self.page_count(bytes)
-      bytes.scan(%r{/Type\s*/Page(?![A-Za-z])}n).size
-    end
 
     def self.delete_file(key)
       Storage.current.delete(key)

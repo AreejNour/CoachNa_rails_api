@@ -1,46 +1,38 @@
-require "anthropic"
-
 module CoachApp
   module PlanImport
     # The only class that touches the network. Sends the PDF to Claude and returns the raw plan
     # hash (shape in SCHEMA) for the Normalizer; trusts nothing in it.
     module Reader
-      MODEL = :"claude-opus-5-5"
       MAX_TOKENS = 64_000
-      # Per attempt in the SDK, so no retries: the answer (or 502) must come before the app's 120 s.
-      TIMEOUT_SECONDS = 100
-      MAX_RETRIES = 0
       ITEM_KINDS = %w[food macro portion text].freeze
       UNITS = %w[g ml piece tbsp tsp cup].freeze
       SLOTS = %w[breakfast lunch dinner snack].freeze
       MACROS = %w[protein carbs fat].freeze
       PORTION_GROUPS = %w[carb protein fat fruit dairy vegetable].freeze
 
-      def self.nullable(type, **rest) = { type: [ type, "null" ], **rest }
-
       ITEM = {
         type: "object", additionalProperties: false,
         required: %w[kind foodId quantity unit preparation macro grams portionGroup portionCount text sourceLine doubt],
         properties: {
           kind: { type: "string", enum: ITEM_KINDS },
-          foodId: nullable("string"),
-          quantity: nullable("number"),
+          foodId: ClaudeJson.nullable("string"),
+          quantity: ClaudeJson.nullable("number"),
           unit: { type: [ "string", "null" ], enum: UNITS + [ nil ] },
-          preparation: nullable("string"),
+          preparation: ClaudeJson.nullable("string"),
           macro: { type: [ "string", "null" ], enum: MACROS + [ nil ] },
-          grams: nullable("number"),
+          grams: ClaudeJson.nullable("number"),
           portionGroup: { type: [ "string", "null" ], enum: PORTION_GROUPS + [ nil ] },
-          portionCount: nullable("number"),
-          text: nullable("string"),
+          portionCount: ClaudeJson.nullable("number"),
+          text: ClaudeJson.nullable("string"),
           sourceLine: { type: "string" },
-          doubt: nullable("string")
+          doubt: ClaudeJson.nullable("string")
         }
       }.freeze
 
       SCHEMA = {
         type: "object", additionalProperties: false, required: %w[tips options],
         properties: {
-          tips: nullable("string"),
+          tips: ClaudeJson.nullable("string"),
           options: {
             type: "array",
             items: {
@@ -107,55 +99,14 @@ module CoachApp
       # foods: Food records visible to the coach. Returns a Hash (the model's answer, untrusted).
       # Raises Unreadable when there is no usable answer, Unavailable when there is none at all.
       def self.call(pdf_bytes, foods)
-        key = ENV["ANTHROPIC_API_KEY"].to_s
-        raise Unavailable, "ANTHROPIC_API_KEY is not set" if key.empty?
-
-        message = client(key).beta.messages.stream(
-          model: MODEL,
-          max_tokens: MAX_TOKENS,
-          thinking: { type: :adaptive },
-          output_config: { effort: :medium, format: { type: :json_schema, schema: SCHEMA } },
-          betas: [ :"server-side-fallback-2026-07-01" ],
-          fallbacks: :default,
-          system_: [
-            { type: "text", text: INSTRUCTIONS + food_lines(foods), cache_control: { type: "ephemeral" } }
-          ],
-          messages: [ { role: "user", content: [
+        ClaudeJson.call(
+          system: INSTRUCTIONS + food_lines(foods), schema: SCHEMA, max_tokens: MAX_TOKENS,
+          content: [
             { type: "document", source: { type: "base64", media_type: "application/pdf",
                                           data: Base64.strict_encode64(pdf_bytes) } },
             { type: "text", text: "Read this plan." }
-          ] } ]
-        ).accumulated_message
-        parse(message)
-      rescue Anthropic::Errors::Error => e
-        raise Unavailable, e.class.name # class only: messages can quote request or response data
-      end
-
-      def self.client(key)
-        Anthropic::Client.new(api_key: key, timeout: TIMEOUT_SECONDS, max_retries: MAX_RETRIES)
-      end
-
-      # Errors here must never carry model output or PDF text: they are logged.
-      def self.parse(message)
-        reason = message.stop_reason
-        raise Unreadable, "stop_reason #{reason}" unless reason == :end_turn
-
-        # After a mid-stream fallback, the text before the `fallback` block is the declined
-        # model's partial answer: read what follows it first, then everything.
-        blocks = message.content
-        last_fallback = blocks.rindex { |b| b.type == :fallback }
-        candidates = []
-        candidates << blocks.drop(last_fallback + 1) if last_fallback
-        candidates << blocks
-        candidates.each do |list|
-          text = list.select { |b| b.type == :text }.map(&:text).join
-          begin
-            return JSON.parse(text)
-          rescue JSON::ParserError
-            next
-          end
-        end
-        raise Unreadable, "output was not JSON"
+          ]
+        )
       end
 
       def self.food_lines(foods)
