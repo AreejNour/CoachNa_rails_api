@@ -88,4 +88,31 @@ class CoachApp::QuestionnaireImport::NormalizerTest < ActiveSupport::TestCase
       assert_equal({ questions: [], skipped: [], truncated: false }, Normalizer.call(raw, language: "en"))
     end
   end
+
+  test "an option over 120 characters is cut with a note" do
+    out = run_with(questions: [ q(type: "single_choice", options: [ "a" * 130, "b" ]) ]).fetch(:questions).first
+    assert_equal "a" * 120, out[:options][0][:label]
+    assert_match(/option.*shortened/i, out[:doubt])
+  end
+
+  test "options equal after the cut are merged with a note" do
+    out = run_with(questions: [ q(type: "single_choice", options: [ "a" * 130, "a" * 125 + "b" * 5, "c" ]) ]).fetch(:questions).first
+    assert_equal [ { label: "a" * 120 }, { label: "c" } ], out[:options]
+    assert_match(/same/i, out[:doubt])
+  end
+
+  test "a plain case-insensitive merge also gets the merge note" do
+    out = run_with(questions: [ q(type: "single_choice", options: [ "Yes", "yes ", "No" ]) ]).fetch(:questions).first
+    assert_match(/same/i, out[:doubt])
+  end
+
+  test "no note when options are unchanged" do
+    out = run_with(questions: [ q(type: "single_choice", options: [ "Yes", "No" ]) ]).fetch(:questions).first
+    assert_nil out[:doubt]
+  end
+
+  test "option notes follow the coach language" do
+    out = run_with(questions: [ q(type: "single_choice", options: [ "Yes", "yes", "a" * 130 ]) ], language: "ar").fetch(:questions).first
+    assert_match(/\p{Arabic}/, out[:doubt])
+  end
 end

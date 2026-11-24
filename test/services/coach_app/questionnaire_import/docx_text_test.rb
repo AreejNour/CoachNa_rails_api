@@ -49,4 +49,31 @@ class CoachApp::QuestionnaireImport::DocxTextTest < ActiveSupport::TestCase
     error = assert_raises(ApiError) { call(big) }
     assert_equal 400, error.status
   end
+
+  test "a decimal list keeps its numbers and a lettered sub-list restarts per parent" do
+    numbering = DocxBuilder.numbering(1 => [ [ "decimal", 1 ], [ "lowerLetter", 1 ] ])
+    body = DocxBuilder.numbered("A", 1) + DocxBuilder.numbered("x", 1, 1) + DocxBuilder.numbered("y", 1, 1) +
+           DocxBuilder.numbered("B", 1) + DocxBuilder.numbered("z", 1, 1)
+    assert_equal "1. A\na. x\nb. y\n2. B\na. z", call(DocxBuilder.build(body, numbering: numbering))
+  end
+
+  test "a bullet list gets dashes" do
+    numbering = DocxBuilder.numbering(2 => [ [ "bullet", 1 ] ])
+    body = DocxBuilder.numbered("A", 2) + DocxBuilder.numbered("B", 2)
+    assert_equal "- A\n- B", call(DocxBuilder.build(body, numbering: numbering))
+  end
+
+  test "roman and upper-letter formats" do
+    numbering = DocxBuilder.numbering(1 => [ [ "upperRoman", 1 ], [ "lowerRoman", 1 ], [ "upperLetter", 1 ] ])
+    body = DocxBuilder.numbered("a", 1) + DocxBuilder.numbered("b", 1, 1) + DocxBuilder.numbered("c", 1, 2)
+    assert_equal "I. a\ni. b\nA. c", call(DocxBuilder.build(body, numbering: numbering))
+  end
+
+  test "numbered paragraphs without numbering.xml get a dash" do
+    assert_equal "- A", call(DocxBuilder.build(DocxBuilder.numbered("A", 1)))
+  end
+
+  test "unreadable numbering.xml falls back to a dash" do
+    assert_equal "- A", call(DocxBuilder.build(DocxBuilder.numbered("A", 1), numbering: "<not xml"))
+  end
 end
