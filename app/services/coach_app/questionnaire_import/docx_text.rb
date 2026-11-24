@@ -12,8 +12,8 @@ module CoachApp
         body = doc.at_xpath("//w:body", W)
         return "" unless body
 
-        body.element_children.flat_map { |node| lines(node) }.join("\n")
-      rescue Zip::Error, Nokogiri::XML::SyntaxError
+        blocks(body).flat_map { |node| lines(node) }.join("\n")
+      rescue Zip::Error, Zlib::Error, EOFError, Nokogiri::XML::SyntaxError
         raise ApiError.new(400, Source::UNSUPPORTED)
       end
 
@@ -21,7 +21,7 @@ module CoachApp
         found = false
         Zip::File.open_buffer(StringIO.new(bytes)) { |zip| found = !zip.find_entry(ENTRY).nil? }
         found
-      rescue Zip::Error
+      rescue Zip::Error, Zlib::Error, EOFError
         false
       end
 
@@ -40,6 +40,13 @@ module CoachApp
       end
       private_class_method :read_entry
 
+      # Child blocks in order, looking inside content controls (w:sdt).
+      def self.blocks(parent)
+        parent.element_children.flat_map do |node|
+          node.name == "sdt" ? blocks(node.at_xpath("w:sdtContent", W) || node.document.create_element("x")) : [ node ]
+        end
+      end
+
       def self.lines(node)
         case node.name
         when "p" then [ paragraph(node) ]
@@ -47,11 +54,11 @@ module CoachApp
         else []
         end
       end
-      private_class_method :lines
+      private_class_method :blocks, :lines
 
       def self.paragraph(node) = node.xpath(".//w:t", W).map(&:text).join
 
-      def self.cell_text(cell) = cell.xpath("w:p", W).map { |p| paragraph(p) }.join(" ")
+      def self.cell_text(cell) = blocks(cell).select { |n| n.name == "p" }.map { |p| paragraph(p) }.join(" ")
       private_class_method :paragraph, :cell_text
     end
   end

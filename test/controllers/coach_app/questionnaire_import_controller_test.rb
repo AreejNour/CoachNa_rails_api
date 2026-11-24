@@ -1,4 +1,5 @@
 require "test_helper"
+require_relative "../../services/coach_app/questionnaire_import/docx_builder"
 
 class CoachApp::QuestionnaireImportControllerTest < ActionDispatch::IntegrationTest
   UNREADABLE = "couldn't read a questionnaire in this file".freeze
@@ -86,10 +87,33 @@ class CoachApp::QuestionnaireImportControllerTest < ActionDispatch::IntegrationT
     assert_equal "couldn't reach the questionnaire reader, try again", response.parsed_body["error"]
   end
 
-  test "zero questions after cleaning answers 422" do
+  test "zero questions and nothing skipped after cleaning answers 422" do
     stubbing_reader({ "questions" => [ { "type" => "bogus", "label" => "x" } ] }) { import }
     assert_response :unprocessable_entity
     assert_equal UNREADABLE, response.parsed_body["error"]
+  end
+
+  test "only skipped items answers 200 so the coach can add them anyway" do
+    raw = { "questions" => [], "skipped" => [ { "text" => "Your age?", "reason" => "health_profile" } ] }
+    stubbing_reader(raw) { import }
+    assert_response :success
+    assert_equal [], data["questions"]
+    assert_equal [ { "text" => "Your age?", "reason" => "health_profile" } ], data["skipped"]
+  end
+
+  test "a Word file with no text answers 422 without calling the reader" do
+    bytes = DocxBuilder.build(DocxBuilder.paragraph("  ") + DocxBuilder.table([ [ "", " " ] ]))
+    stubbing_reader(raw_answer) { import(params: { file: upload(bytes, "q.docx") }) }
+    assert_response :unprocessable_entity
+    assert_equal UNREADABLE, response.parsed_body["error"]
+    assert_empty @reads
+  end
+
+  test "a truncated Word file answers 400 not 500" do
+    bytes = DocxBuilder.build(DocxBuilder.paragraph("hello " * 200))
+    stubbing_reader(raw_answer) { import(params: { file: upload(bytes[0, bytes.bytesize / 2], "q.docx") }) }
+    assert_response :bad_request
+    assert_empty @reads
   end
 
   test "a .doc upload answers 400" do

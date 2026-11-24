@@ -65,7 +65,10 @@ module CoachApp
         raise ApiError.new(400, "file too large") if bytes.bytesize > MAX_DOCX_BYTES
         raise ApiError.new(400, UNSUPPORTED) unless DocxText.entry?(bytes)
 
-        new(kind: :text, text: DocxText.call(bytes))
+        text = DocxText.call(bytes)
+        raise ApiError.new(422, QuestionnaireImport::UNREADABLE) if text.gsub(/[\s|]+/, "").empty?
+
+        new(kind: :text, text: text)
       end
       private_class_method :from_text, :from_file, :pdf, :image, :docx
     end

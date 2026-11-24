@@ -23,6 +23,23 @@ class CoachApp::QuestionnaireImport::DocxTextTest < ActiveSupport::TestCase
     assert_equal Encoding::UTF_8, out.encoding
   end
 
+  test "content-control blocks come out in document order at body and cell level" do
+    sdt = ->(inner) { "<w:sdt><w:sdtPr/><w:sdtContent>#{inner}</w:sdtContent></w:sdt>" }
+    cell_sdt = "<w:tbl><w:tr><w:tc>#{sdt.call(DocxBuilder.paragraph("InCell"))}</w:tc></w:tr></w:tbl>"
+    body = DocxBuilder.paragraph("Before") + sdt.call(DocxBuilder.paragraph("Q1") + DocxBuilder.paragraph("Q2")) +
+           cell_sdt + DocxBuilder.paragraph("After")
+    assert_equal "Before\nQ1\nQ2\nInCell\nAfter", call(DocxBuilder.build(body))
+  end
+
+  test "truncated zip bytes raise a 400 not a zlib or eof error" do
+    bytes = DocxBuilder.build(DocxBuilder.paragraph("hello " * 500))
+    [ 0.3, 0.5, 0.8 ].each do |f|
+      cut = bytes[0, (bytes.bytesize * f).to_i]
+      assert_equal false, CoachApp::QuestionnaireImport::DocxText.entry?(cut)
+      assert_equal 400, assert_raises(ApiError) { call(cut) }.status
+    end
+  end
+
   test "an empty document returns an empty string" do
     assert_equal "", call(DocxBuilder.build(""))
   end

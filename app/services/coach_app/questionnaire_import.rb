@@ -18,7 +18,7 @@ module CoachApp
       labels = Questions.list(coach).map(&:label)
       raw = Reader.call(source, existing_labels: labels, language: language)
       normalized = Normalizer.call(raw, language: language)
-      raise ApiError.new(422, UNREADABLE) if normalized[:questions].empty?
+      raise ApiError.new(422, UNREADABLE) if normalized[:questions].empty? && normalized[:skipped].empty?
 
       normalized
     rescue Unreadable => e
