@@ -117,6 +117,7 @@ module CoachApp
         end
 
         def label(fmt, n)
+          n = n.clamp(1, 3999)
           case fmt
           when "decimal" then "#{n}. "
           when "lowerLetter" then "#{letters(n)}. "

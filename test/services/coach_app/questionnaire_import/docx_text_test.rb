@@ -76,4 +76,12 @@ class CoachApp::QuestionnaireImport::DocxTextTest < ActiveSupport::TestCase
   test "unreadable numbering.xml falls back to a dash" do
     assert_equal "- A", call(DocxBuilder.build(DocxBuilder.numbered("A", 1), numbering: "<not xml"))
   end
+
+  test "a negative or zero start number never fails" do
+    %w[upperRoman lowerRoman upperLetter lowerLetter decimal].each do |fmt|
+      numbering = DocxBuilder.numbering(1 => [ [ fmt, -3 ] ])
+      out = call(DocxBuilder.build(DocxBuilder.numbered("A", 1), numbering: numbering))
+      assert_match(/\A\S+\. A\z/, out)
+    end
+  end
 end
