@@ -26,6 +26,7 @@ Rails.application.routes.draw do
     get "questionnaire", to: "questionnaire#index"
     post "questionnaire/questions", to: "questionnaire#create"
     post "questionnaire/questions/bulk", to: "questionnaire#bulk"
+    post "questionnaire/import", to: "questionnaire_imports#create"
     patch "questionnaire/questions/:id", to: "questionnaire#update"
     delete "questionnaire/questions/:id", to: "questionnaire#destroy"
     get "clients", to: "clients#index"
