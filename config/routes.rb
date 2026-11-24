@@ -25,6 +25,7 @@ Rails.application.routes.draw do
     delete "packages/:id", to: "packages#destroy"
     get "questionnaire", to: "questionnaire#index"
     post "questionnaire/questions", to: "questionnaire#create"
+    post "questionnaire/questions/bulk", to: "questionnaire#bulk"
     patch "questionnaire/questions/:id", to: "questionnaire#update"
     delete "questionnaire/questions/:id", to: "questionnaire#destroy"
     get "clients", to: "clients#index"

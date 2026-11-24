@@ -144,4 +144,35 @@ class CoachApp::QuestionsTest < ActiveSupport::TestCase
       CoachApp::Questions.create!(@coach, { "type" => "photo", "label" => "P", "options" => [ { "label" => "A" }, { "label" => "B" } ] })
     end
   end
+
+  test "create_many! appends in order and returns the full list" do
+    2.times { |i| CoachApp::Questions.create!(@coach, text_attrs("label" => "Old #{i}")) }
+    list = CoachApp::Questions.create_many!(@coach, [ text_attrs("label" => "A"), choice_attrs("label" => "B"), text_attrs("label" => "C") ])
+    assert_equal [ "Old 0", "Old 1", "A", "B", "C" ], list.map(&:label)
+    assert_equal [ 1, 2, 3, 4, 5 ], list.map(&:position)
+    assert list[3].options.all? { |o| o["key"].start_with?("opt_") }
+  end
+
+  test "create_many! creates the questionnaire once with positions from 1" do
+    list = CoachApp::Questions.create_many!(@coach, [ text_attrs("label" => "A"), text_attrs("label" => "B") ])
+    assert_equal [ 1, 2 ], list.map(&:position)
+    assert_equal 1, Questionnaire.where(coach_id: @coach.id).count
+  end
+
+  test "create_many! is all or nothing and names the bad item" do
+    CoachApp::Questions.create!(@coach, text_attrs)
+    bad = choice_attrs("options" => [ { "label" => "Only" } ])
+    error = assert_raises(ApiError) { CoachApp::Questions.create_many!(@coach, [ text_attrs, bad, text_attrs ]) }
+    assert_equal 400, error.status
+    assert_equal 1, error.extra[:index]
+    assert_equal 1, QuestionnaireQuestion.count
+  end
+
+  test "create_many! takes 1 to 50 items" do
+    [ [], Array.new(51) { text_attrs } ].each do |items|
+      error = assert_raises(ApiError) { CoachApp::Questions.create_many!(@coach, items) }
+      assert_equal 400, error.status
+    end
+    assert_equal 50, CoachApp::Questions.create_many!(@coach, Array.new(50) { text_attrs }).length
+  end
 end

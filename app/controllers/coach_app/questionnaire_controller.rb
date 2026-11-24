@@ -8,6 +8,11 @@ module CoachApp
       render_success(QuestionJson.call(Questions.create!(current_coach, params)), status: :created)
     end
 
+    def bulk
+      questions = Questions.create_many!(current_coach, params[:questions])
+      render_success({ questions: questions.map { |q| QuestionJson.call(q) } }, status: :created)
+    end
+
     def update
       render_success(QuestionJson.call(Questions.update!(current_coach, params[:id], params)))
     end
