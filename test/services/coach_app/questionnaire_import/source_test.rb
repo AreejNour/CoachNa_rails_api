@@ -32,6 +32,11 @@ class CoachApp::QuestionnaireImport::SourceTest < ActiveSupport::TestCase
     assert_rejected("file too large") { from(file: upload("%PDF-".b + "x" * 21_000_000)) }
   end
 
+  test "an 11 MB docx is too large but an 11 MB pdf is not" do
+    assert_rejected("file too large") { from(file: upload("PK\x03\x04".b + "x" * 11_000_000)) }
+    assert_equal :pdf, from(file: upload("%PDF-".b + "x" * 11_000_000)).kind
+  end
+
   test "the type comes from the bytes, not the name" do
     file = upload(PNG + "data")
     file.define_singleton_method(:original_filename) { "x.pdf" }

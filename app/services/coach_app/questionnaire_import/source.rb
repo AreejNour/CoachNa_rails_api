@@ -5,6 +5,7 @@ module CoachApp
     # from its bytes, not its name or declared content type.
     class Source < Struct.new(:kind, :bytes, :media_type, :text, keyword_init: true)
       MAX_BYTES = PlanImport::MAX_BYTES
+      MAX_DOCX_BYTES = 10_000_000
       MAX_IMAGE_BYTES = 5_000_000
       MAX_TEXT_CHARS = 20_000
       PNG_MAGIC = "\x89PNG\r\n\x1a\n".b
@@ -61,6 +62,7 @@ module CoachApp
       end
 
       def self.docx(bytes)
+        raise ApiError.new(400, "file too large") if bytes.bytesize > MAX_DOCX_BYTES
         raise ApiError.new(400, UNSUPPORTED) unless DocxText.entry?(bytes)
 
         new(kind: :text, text: DocxText.call(bytes))
