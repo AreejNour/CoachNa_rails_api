@@ -47,3 +47,4 @@ end
 gem "anthropic", "~> 2.10"
 
 gem "bunny", "~> 2.23"
+gem "rubyzip", "~> 2.4", require: "zip"
