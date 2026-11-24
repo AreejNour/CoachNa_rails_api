@@ -11,7 +11,7 @@ module CoachApp
       PNG_MAGIC = "\x89PNG\r\n\x1a\n".b
       JPEG_MAGIC = "\xFF\xD8\xFF".b
       ZIP_MAGIC = "PK\x03\x04".b
-      UNSUPPORTED = "use a PDF, Word (.docx), JPG or PNG file".freeze
+      UNSUPPORTED = "use a PDF, Word (.docx), JPG or PNG file. For an old .doc file, save it as .docx or paste the text".freeze
       SEND_ONE = "send a file or text".freeze
 
       def self.from(file:, text:)

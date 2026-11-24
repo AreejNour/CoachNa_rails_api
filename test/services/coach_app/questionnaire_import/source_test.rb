@@ -4,7 +4,7 @@ require_relative "docx_builder"
 class CoachApp::QuestionnaireImport::SourceTest < ActiveSupport::TestCase
   PNG = "\x89PNG\r\n\x1a\n".b
   JPEG = "\xFF\xD8\xFF".b
-  UNSUPPORTED = "use a PDF, Word (.docx), JPG or PNG file".freeze
+  UNSUPPORTED = "use a PDF, Word (.docx), JPG or PNG file. For an old .doc file, save it as .docx or paste the text".freeze
 
   def from(file: nil, text: nil) = CoachApp::QuestionnaireImport::Source.from(file: file, text: text)
   def upload(bytes) = StringIO.new(bytes)

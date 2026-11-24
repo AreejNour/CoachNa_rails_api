@@ -9,10 +9,14 @@ module CoachApp
       NOTES = {
         "en" => { few_options: "Fewer than 2 options were found, so this became a text question.",
                   many_options: "Only the first %d options were kept.",
-                  long_label: "The question was shortened to fit." },
+                  long_label: "The question was shortened to fit.",
+                  long_option: "Some option labels were shortened to fit.",
+                  merged_options: "Options that became the same were merged into one." },
         "ar" => { few_options: "تم العثور على أقل من خيارين، لذلك أصبح هذا السؤال نصيًا.",
                   many_options: "تم الاحتفاظ بأول %d خيارًا فقط.",
-                  long_label: "تم اختصار السؤال ليناسب الحد المسموح." }
+                  long_label: "تم اختصار السؤال ليناسب الحد المسموح.",
+                  long_option: "تم اختصار بعض الخيارات لتناسب الحد المسموح.",
+                  merged_options: "تم دمج الخيارات التي أصبحت متطابقة في خيار واحد." }
       }.freeze
 
       def self.call(raw, language:)
@@ -42,7 +46,9 @@ module CoachApp
         end
         options = nil
         if Questions::CHOICE_TYPES.include?(type)
-          options = options(raw["options"])
+          options, cut, merged = options(raw["options"])
+          doubts << notes[:long_option] if cut
+          doubts << notes[:merged_options] if merged
           if options.length < Questions::OPTIONS_MIN
             type = "text"
             options = nil
@@ -58,14 +64,19 @@ module CoachApp
 
       def self.options(raw)
         seen = {}
+        cut = merged = false
         list(raw).each do |o|
           o = clean(o)
           next unless o
 
-          o = o[0, Questions::OPTION_LABEL_MAX].rstrip
+          if o.length > Questions::OPTION_LABEL_MAX
+            o = o[0, Questions::OPTION_LABEL_MAX].rstrip
+            cut = true
+          end
+          merged ||= seen.key?(o.downcase)
           seen[o.downcase] ||= o
         end
-        seen.values
+        [ seen.values, cut, merged ]
       end
 
       def self.skipped_item(raw, notes)
