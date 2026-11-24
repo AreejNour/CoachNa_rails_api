@@ -135,28 +135,7 @@ module CoachApp
         Anthropic::Client.new(api_key: key, timeout: TIMEOUT_SECONDS, max_retries: MAX_RETRIES)
       end
 
-      # Errors here must never carry model output or PDF text: they are logged.
-      def self.parse(message)
-        reason = message.stop_reason
-        raise Unreadable, "stop_reason #{reason}" unless reason == :end_turn
-
-        # After a mid-stream fallback, the text before the `fallback` block is the declined
-        # model's partial answer: read what follows it first, then everything.
-        blocks = message.content
-        last_fallback = blocks.rindex { |b| b.type == :fallback }
-        candidates = []
-        candidates << blocks.drop(last_fallback + 1) if last_fallback
-        candidates << blocks
-        candidates.each do |list|
-          text = list.select { |b| b.type == :text }.map(&:text).join
-          begin
-            return JSON.parse(text)
-          rescue JSON::ParserError
-            next
-          end
-        end
-        raise Unreadable, "output was not JSON"
-      end
+      def self.parse(message) = ClaudeJson.parse(message, Unreadable)
 
       def self.food_lines(foods)
         foods.map do |f|
