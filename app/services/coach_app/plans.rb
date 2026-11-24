@@ -137,6 +137,20 @@ module CoachApp
     # Same row shape Node writes from publishPlan (recordClientNotification).
     def self.notify_plan_ready!(subscription, coach, plan, version)
       first = version == 1
+      name = coach.full_name
+      Outbox.enqueue_and_publish_after_commit!(
+        kind: "push",
+        payload: {
+          recipient: { type: "client", id: subscription.client_id },
+          title: first ? { "ar" => "خطتك جاهزة", "en" => "Your plan is ready" }
+                       : { "ar" => "تم تحديث خطتك", "en" => "Your plan was updated" },
+          body: first ? { "ar" => "نشر #{name} خطتك. افتحها لترى وجبات اليوم.",
+                          "en" => "#{name} published your plan. Open it to see today's meals." }
+                      : { "ar" => "نشر #{name} نسخة جديدة من خطتك.",
+                          "en" => "#{name} published a new version of your plan." },
+          data: { screen: "plan" }
+        }
+      )
       Notification.create!(
         recipient_type: "client",
         recipient_id: subscription.client_id,

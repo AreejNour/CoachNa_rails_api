@@ -87,4 +87,21 @@ class CoachApp::QuestionnaireControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
     assert_equal({ "success" => false, "error" => "validation failed" }, response.parsed_body)
   end
+
+  test "bulk saves the list and returns every question" do
+    create_question
+    post "/coach/questionnaire/questions/bulk",
+         params: { questions: [ body(label: "A"), body(type: "single_choice", label: "B", options: [ { label: "X" }, { label: "Y" } ]) ] },
+         headers: auth, as: :json
+    assert_response :created
+    assert_equal [ "What's your goal?", "A", "B" ], data["questions"].map { |q| q["label"] }
+    assert_equal [ 1, 2, 3 ], data["questions"].map { |q| q["position"] }
+  end
+
+  test "bulk answers 400 with the index of a bad item" do
+    post "/coach/questionnaire/questions/bulk",
+         params: { questions: [ body, body(type: "audio") ] }, headers: auth, as: :json
+    assert_response :bad_request
+    assert_equal({ "success" => false, "error" => "validation failed", "index" => 1 }, response.parsed_body)
+  end
 end

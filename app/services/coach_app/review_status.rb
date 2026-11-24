@@ -31,6 +31,7 @@ module CoachApp
         raise ApiError.new(400, "missing requirements", missing: gaps) if gaps.any?
 
         coach.update!(status: "pending_review", profile_submitted_at: Time.current, rejection_reason: nil)
+        CoachEvents.email_coach!(coach, "coach_application_received")
       end
       { status: coach.status }
     end

@@ -11,7 +11,7 @@ class CoachApp::SignupsControllerTest < ActionDispatch::IntegrationTest
 
   def verify(**overrides)
     post "/coach/auth/signup/verify", as: :json, params: {
-      phone: LOCAL, country: "EG", code: "123456", password: PASSWORD, fullName: "Rania Adel"
+      phone: LOCAL, country: "EG", code: "123456", password: PASSWORD, fullName: "Rania Adel", email: "rania@example.com"
     }.merge(overrides)
   end
 
@@ -224,12 +224,20 @@ class CoachApp::SignupsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/passwordHash|password_hash|commission|\$2a\$/, response.body)
   end
 
-  test "verify trims the full name and leaves email out when absent" do
+  test "verify trims the full name" do
     add_code
     verify(fullName: "  Rania  ")
 
     assert_equal "Rania", data["coach"]["fullName"]
-    assert_nil data["coach"]["email"]
+  end
+
+  test "verify without an email is refused and leaves the code unused" do
+    row = add_code
+    verify(email: nil)
+
+    assert_failure :bad_request, "validation failed"
+    assert_nil row.reload.consumed_at
+    assert_equal 0, Coach.where(phone: E164).count
   end
 
   test "a code typed in Arabic digits verifies" do
@@ -382,7 +390,7 @@ class CoachApp::SignupConcurrencyTest < ActiveSupport::TestCase
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
           start.wait
-          CoachApp::Signup.verify(phone: PHONE, country: "EG", code: "123456", password: "Demo@12345", full_name: "Rania", email: nil)
+          CoachApp::Signup.verify(phone: PHONE, country: "EG", code: "123456", password: "Demo@12345", full_name: "Rania", email: "rania@example.com")
           :created
         rescue ApiError => error
           error.status

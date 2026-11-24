@@ -10,6 +10,9 @@ Rails.application.routes.draw do
     post "auth/refresh", to: "sessions#refresh"
     post "auth/logout", to: "sessions#logout"
     get "me", to: "me#show"
+    put "me/email", to: "me#update_email"
+    post "devices", to: "devices#create"
+    delete "devices/:token", to: "devices#destroy", constraints: { token: /[^\/]+/ }
     patch "profile", to: "profiles#update"
     get "profile/status", to: "review#status"
     post "profile/submit", to: "review#submit"
@@ -22,6 +25,8 @@ Rails.application.routes.draw do
     delete "packages/:id", to: "packages#destroy"
     get "questionnaire", to: "questionnaire#index"
     post "questionnaire/questions", to: "questionnaire#create"
+    post "questionnaire/questions/bulk", to: "questionnaire#bulk"
+    post "questionnaire/import", to: "questionnaire_imports#create"
     patch "questionnaire/questions/:id", to: "questionnaire#update"
     delete "questionnaire/questions/:id", to: "questionnaire#destroy"
     get "clients", to: "clients#index"

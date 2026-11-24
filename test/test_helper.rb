@@ -16,5 +16,14 @@ module ActiveSupport
     fixtures :all
 
     # Add more helper methods to be used by all tests here...
+
+    # Minitest 6 has no Object#stub; swap the singleton method for the block's duration.
+    def swap_method(target, name, impl)
+      original = target.method(name)
+      target.define_singleton_method(name) { |*args, **kwargs| impl.call(*args, **kwargs) }
+      yield
+    ensure
+      target.define_singleton_method(name, original)
+    end
   end
 end

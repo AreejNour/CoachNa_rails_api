@@ -75,6 +75,7 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
       uri (>= 0.13.1)
+    amq-protocol (2.10.0)
     anthropic (2.10.0)
       base64 (~> 0.1)
       connection_pool (>= 2, < 4)
@@ -110,6 +111,9 @@ GEM
     bundler-audit (0.9.3)
       bundler (>= 1.2.0)
       thor (~> 1.0)
+    bunny (2.24.0)
+      amq-protocol (~> 2.3)
+      sorted_set (~> 1, >= 1.0.2)
     concurrent-ruby (1.3.8)
     connection_pool (3.0.2)
     crass (1.0.8)
@@ -250,6 +254,7 @@ GEM
       logger
       prism (>= 1.6.0)
       tsort
+    rbtree (0.4.7)
     rdoc (8.1.0)
       erb
       prism (>= 1.6.0)
@@ -288,7 +293,10 @@ GEM
       rubocop-performance (>= 1.24)
       rubocop-rails (>= 2.30)
     ruby-progressbar (1.13.0)
+    rubyzip (2.4.1)
     securerandom (0.4.1)
+    sorted_set (1.1.0)
+      rbtree
     standardwebhooks (1.3.0)
       base64 (~> 0.3.0)
     thor (1.5.0)
@@ -325,6 +333,7 @@ DEPENDENCIES
   bcrypt (~> 3.1.22)
   bootsnap
   bundler-audit
+  bunny (~> 2.23)
   debug
   dotenv-rails
   jwt (~> 3.3)
@@ -334,6 +343,7 @@ DEPENDENCIES
   rack-cors
   rails (~> 8.1.4, >= 8.1.4.1)
   rubocop-rails-omakase
+  rubyzip (~> 2.4)
   tzinfo-data
 
 CHECKSUMS
@@ -349,6 +359,7 @@ CHECKSUMS
   activerecord (8.1.4.1) sha256=bd65599ca0b5d210937f835d42c7aff69d271741c75aab022730be6cbce67e87
   activestorage (8.1.4.1) sha256=0f4e2f114f3584723a80a2c089aacc6170e765a0b2c385c9782e26ed78f05c66
   activesupport (8.1.4.1) sha256=16ac4f341ca65c85a1fcdb8ac73f68891aae9e3c4a6f9c3a27daed8b00017ed7
+  amq-protocol (2.10.0) sha256=98b3fe83837401cd0a7ff008faf4a454a56dc0e8c569c12db65c9225b63fd60e
   anthropic (2.10.0) sha256=783245675b938a4c6d067922ce807f7b7ae91d794524a1185636f38b7a138c56
   ast (2.4.3) sha256=954615157c1d6a382bc27d690d973195e79db7f55e9765ac7c481c60bdb4d383
   aws-eventstream (1.4.1) sha256=ceb6a99c61df4bb00344e54aed0351574beca24f87a0d1487d1d2ed80929ce96
@@ -363,6 +374,7 @@ CHECKSUMS
   bootsnap (1.26.1) sha256=5b5bd90f8f13ea338627c1d56ffbe2ea25e743ac48c2afec1a9bea3a06a264e2
   builder (3.3.0) sha256=497918d2f9dca528fdca4b88d84e4ef4387256d984b8154e9d5d3fe5a9c8835f
   bundler-audit (0.9.3) sha256=81c8766c71e47d0d28a0f98c7eed028539f21a6ea3cd8f685eb6f42333c9b4e9
+  bunny (2.24.0) sha256=072fe4ae98eaa9c95a17e4d166204f710bba8a9a7070b73a8c3b023f439d1682
   concurrent-ruby (1.3.8) sha256=b2f1be836e968ccc78ccfce277ea79c72a88633f22306782c16ff23fb415d1e1
   connection_pool (3.0.2) sha256=33fff5ba71a12d2aa26cb72b1db8bba2a1a01823559fb01d29eb74c286e62e0a
   crass (1.0.8) sha256=7a0145c7a2c59f8e7923b3a69ce819c444823a00a5127d805298fea13be24efe
@@ -430,6 +442,7 @@ CHECKSUMS
   rainbow (3.1.1) sha256=039491aa3a89f42efa1d6dec2fc4e62ede96eb6acd95e52f1ad581182b79bc6a
   rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
   rbs (4.2.0) sha256=51f7b886dcc05bc09e10b901daa6a81829f6adc03101d6ca9ea4aac6103e0674
+  rbtree (0.4.7) sha256=1efabbcb3fd5f12249c9c8a610a765074868164eed0c50c9db2531c00ed161cb
   rdoc (8.1.0) sha256=befc37880a5cfd36dcb176c748b5fd5ee39dd3536a75e81824e4972ce230f60a
   regexp_parser (2.13.1) sha256=5aedb6b7c35688f51e86eef17a15374dfd287c83f4ca644b2c5f3ec50a33b44b
   reline (0.7.0) sha256=5b012d8e55dbf9d450f12bde2cf7d15ff546ae80b3f8f3b30e570d431815583d
@@ -440,7 +453,9 @@ CHECKSUMS
   rubocop-rails (2.38.0) sha256=6e2b7c532efa95e3050371bec20b8f5b025662acead8bc70ee31f0e3e6fa2f06
   rubocop-rails-omakase (1.1.0) sha256=2af73ac8ee5852de2919abbd2618af9c15c19b512c4cfc1f9a5d3b6ef009109d
   ruby-progressbar (1.13.0) sha256=80fc9c47a9b640d6834e0dc7b3c94c9df37f08cb072b7761e4a71e22cff29b33
+  rubyzip (2.4.1) sha256=8577c88edc1fde8935eb91064c5cb1aef9ad5494b940cf19c775ee833e075615
   securerandom (0.4.1) sha256=cc5193d414a4341b6e225f0cb4446aceca8e50d5e1888743fac16987638ea0b1
+  sorted_set (1.1.0) sha256=bac01eb16b6bcfcdb7d732a28e87422be8b5c9fdcfeadbe9072682407524ee83
   standardwebhooks (1.3.0) sha256=e3f7ef4fea145693c874cc45d286d577610b2decff62f3f6398271c1719024c2
   thor (1.5.0) sha256=e3a9e55fe857e44859ce104a84675ab6e8cd59c650a49106a05f55f136425e73
   timeout (0.6.1) sha256=78f57368a7e7bbadec56971f78a3f5ecbcfb59b7fcbb0a3ed6ddc08a5094accb

@@ -273,6 +273,25 @@ CREATE TABLE public.conversations (
 
 
 --
+-- Name: device_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.device_tokens (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    owner_type text NOT NULL,
+    owner_id uuid NOT NULL,
+    token text NOT NULL,
+    platform text NOT NULL,
+    language text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT device_tokens_language_valid CHECK ((language = ANY (ARRAY['ar'::text, 'en'::text]))),
+    CONSTRAINT device_tokens_owner_type_valid CHECK ((owner_type = ANY (ARRAY['client'::text, 'coach'::text]))),
+    CONSTRAINT device_tokens_platform_valid CHECK ((platform = ANY (ARRAY['ios'::text, 'android'::text])))
+);
+
+
+--
 -- Name: foods; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -338,6 +357,24 @@ CREATE TABLE public.notifications (
 
 
 --
+-- Name: outbox_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.outbox_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    kind text NOT NULL,
+    payload jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    published_at timestamp with time zone,
+    processed_at timestamp with time zone,
+    attempts integer DEFAULT 0 NOT NULL,
+    last_error text,
+    failed_at timestamp with time zone,
+    CONSTRAINT outbox_messages_kind_valid CHECK ((kind = ANY (ARRAY['push'::text, 'email'::text])))
+);
+
+
+--
 -- Name: payments; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -354,6 +391,10 @@ CREATE TABLE public.payments (
     status text NOT NULL,
     paid_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    failure_reason text,
+    provider_intention_id text,
+    provider_order_id text,
+    checkout_url text,
     CONSTRAINT payments_amount_positive CHECK ((amount_piastres > 0)),
     CONSTRAINT payments_purpose_valid CHECK ((purpose = ANY (ARRAY['subscription'::text, 'order'::text]))),
     CONSTRAINT payments_status_valid CHECK ((status = ANY (ARRAY['pending'::text, 'paid'::text, 'failed'::text, 'refunded'::text]))),
@@ -463,6 +504,33 @@ CREATE TABLE public.questionnaire_answers (
     question_id uuid NOT NULL,
     answer jsonb NOT NULL,
     photo_storage_key text,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: questionnaire_draft_answers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.questionnaire_draft_answers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    draft_id uuid NOT NULL,
+    question_id uuid NOT NULL,
+    answer jsonb NOT NULL,
+    photo_storage_key text,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: questionnaire_drafts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.questionnaire_drafts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    client_id uuid NOT NULL,
+    coach_id uuid NOT NULL,
+    package_id uuid,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
@@ -709,6 +777,22 @@ ALTER TABLE ONLY public.conversations
 
 
 --
+-- Name: device_tokens device_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_tokens
+    ADD CONSTRAINT device_tokens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: device_tokens device_tokens_token_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_tokens
+    ADD CONSTRAINT device_tokens_token_unique UNIQUE (token);
+
+
+--
 -- Name: foods foods_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -730,6 +814,14 @@ ALTER TABLE ONLY public.messages
 
 ALTER TABLE ONLY public.notifications
     ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: outbox_messages outbox_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.outbox_messages
+    ADD CONSTRAINT outbox_messages_pkey PRIMARY KEY (id);
 
 
 --
@@ -786,6 +878,22 @@ ALTER TABLE ONLY public.plans
 
 ALTER TABLE ONLY public.questionnaire_answers
     ADD CONSTRAINT questionnaire_answers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: questionnaire_draft_answers questionnaire_draft_answers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.questionnaire_draft_answers
+    ADD CONSTRAINT questionnaire_draft_answers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: questionnaire_drafts questionnaire_drafts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.questionnaire_drafts
+    ADD CONSTRAINT questionnaire_drafts_pkey PRIMARY KEY (id);
 
 
 --
@@ -894,6 +1002,13 @@ CREATE UNIQUE INDEX coach_reviews_subscription_unique ON public.coach_reviews US
 
 
 --
+-- Name: device_tokens_owner_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX device_tokens_owner_idx ON public.device_tokens USING btree (owner_type, owner_id);
+
+
+--
 -- Name: foods_group_active_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -929,10 +1044,24 @@ CREATE INDEX notifications_recipient_idx ON public.notifications USING btree (re
 
 
 --
+-- Name: outbox_messages_unpublished_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX outbox_messages_unpublished_idx ON public.outbox_messages USING btree (published_at) WHERE (published_at IS NULL);
+
+
+--
 -- Name: payments_client_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX payments_client_idx ON public.payments USING btree (client_id);
+
+
+--
+-- Name: payments_provider_ref_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX payments_provider_ref_unique ON public.payments USING btree (provider, provider_ref) WHERE (provider_ref IS NOT NULL);
 
 
 --
@@ -992,6 +1121,20 @@ CREATE UNIQUE INDEX questionnaire_answers_one_per_question ON public.questionnai
 
 
 --
+-- Name: questionnaire_draft_answers_one_per_question; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX questionnaire_draft_answers_one_per_question ON public.questionnaire_draft_answers USING btree (draft_id, question_id);
+
+
+--
+-- Name: questionnaire_drafts_client_coach_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX questionnaire_drafts_client_coach_unique ON public.questionnaire_drafts USING btree (client_id, coach_id);
+
+
+--
 -- Name: questionnaire_questions_order_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1030,7 +1173,7 @@ CREATE INDEX subscriptions_coach_idx ON public.subscriptions USING btree (coach_
 -- Name: subscriptions_one_current; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX subscriptions_one_current ON public.subscriptions USING btree (client_id) WHERE (status <> ALL (ARRAY['ended'::text, 'cancelled'::text]));
+CREATE UNIQUE INDEX subscriptions_one_current ON public.subscriptions USING btree (client_id) WHERE (status <> ALL (ARRAY['ended'::text, 'cancelled'::text, 'payment_failed'::text]));
 
 
 --
@@ -1216,6 +1359,38 @@ ALTER TABLE ONLY public.plans
 
 
 --
+-- Name: questionnaire_drafts qd_coach_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.questionnaire_drafts
+    ADD CONSTRAINT qd_coach_id_fk FOREIGN KEY (coach_id) REFERENCES public.coaches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: questionnaire_drafts qd_package_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.questionnaire_drafts
+    ADD CONSTRAINT qd_package_id_fk FOREIGN KEY (package_id) REFERENCES public.coach_packages(id) ON DELETE SET NULL;
+
+
+--
+-- Name: questionnaire_draft_answers qda_draft_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.questionnaire_draft_answers
+    ADD CONSTRAINT qda_draft_id_fk FOREIGN KEY (draft_id) REFERENCES public.questionnaire_drafts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: questionnaire_draft_answers qda_question_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.questionnaire_draft_answers
+    ADD CONSTRAINT qda_question_id_fk FOREIGN KEY (question_id) REFERENCES public.questionnaire_questions(id) ON DELETE CASCADE;
+
+
+--
 -- Name: questionnaire_answers questionnaire_answers_question_id_questionnaire_questions_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1229,6 +1404,14 @@ ALTER TABLE ONLY public.questionnaire_answers
 
 ALTER TABLE ONLY public.questionnaire_answers
     ADD CONSTRAINT questionnaire_answers_subscription_id_subscriptions_id_fk FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: questionnaire_drafts questionnaire_drafts_client_id_clients_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.questionnaire_drafts
+    ADD CONSTRAINT questionnaire_drafts_client_id_clients_id_fk FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
 
 
 --
