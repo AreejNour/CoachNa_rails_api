@@ -175,4 +175,18 @@ class CoachApp::QuestionsTest < ActiveSupport::TestCase
     end
     assert_equal 50, CoachApp::Questions.create_many!(@coach, Array.new(50) { text_attrs }).length
   end
+
+  test "create_many! ignores option keys sent by the client" do
+    item = choice_attrs("options" => [ { "key" => "opt_client", "label" => "A" }, { "label" => "B" } ])
+    keys = CoachApp::Questions.create_many!(@coach, [ item ]).first.options.map { |o| o["key"] }
+    assert_not_includes keys, "opt_client"
+    assert keys.all? { |k| k.start_with?("opt_") }
+    assert_equal 2, keys.uniq.length
+  end
+
+  test "create_many! names a non-hash item by index" do
+    error = assert_raises(ApiError) { CoachApp::Questions.create_many!(@coach, [ text_attrs, "nope" ]) }
+    assert_equal 400, error.status
+    assert_equal 1, error.extra[:index]
+  end
 end

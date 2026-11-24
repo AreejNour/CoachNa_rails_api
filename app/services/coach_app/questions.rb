@@ -21,16 +21,10 @@ module CoachApp
     end
 
     def self.create!(coach, attrs)
-      type = valid_type(attrs["type"])
-      label = Input.trimmed(attrs["label"], max: LABEL_MAX)
-      required = valid_required(attrs.key?("required") ? attrs["required"] : true)
-      options = valid_options(attrs["options"], type)
-
+      attrs = valid_attrs(attrs)
       questionnaire = coach.questionnaire || coach.create_questionnaire!(title: DEFAULT_TITLE)
       position = questionnaire.questionnaire_questions.maximum(:position).to_i + 1
-      questionnaire.questionnaire_questions.create!(
-        type: type, label: label, required: required, options: options, position: position
-      )
+      questionnaire.questionnaire_questions.create!(**attrs, position: position)
     end
 
     # Saves a whole list at once, all or nothing: every item is checked before anything is written,
@@ -40,7 +34,7 @@ module CoachApp
 
       valid = items.each_with_index.map do |item, index|
         Input.invalid! unless item.is_a?(Hash) || item.is_a?(ActionController::Parameters)
-        valid_attrs(item)
+        valid_attrs(item, keep_keys: false)
       rescue ApiError => e
         raise ApiError.new(e.status, e.message, **e.extra, index: index)
       end
@@ -77,13 +71,13 @@ module CoachApp
       question || raise(ApiError.new(404, "question not found"))
     end
 
-    def self.valid_attrs(attrs)
+    def self.valid_attrs(attrs, keep_keys: true)
       type = valid_type(attrs["type"])
       {
         type: type,
         label: Input.trimmed(attrs["label"], max: LABEL_MAX),
         required: valid_required(attrs.key?("required") ? attrs["required"] : true),
-        options: valid_options(attrs["options"], type)
+        options: valid_options(attrs["options"], type, keep_keys: keep_keys)
       }
     end
     private_class_method :valid_attrs
@@ -103,7 +97,7 @@ module CoachApp
     # Choice types need 2–20 options with unique, non-empty labels; other types (photo included) carry none.
     # Each option keeps the key it was sent with (so a relabel never changes a past answer) and a
     # new option gets a fresh key.
-    def self.valid_options(raw, type)
+    def self.valid_options(raw, type, keep_keys: true)
       unless CHOICE_TYPES.include?(type)
         Input.invalid! if raw.present?
         return nil
@@ -116,7 +110,7 @@ module CoachApp
         label = Input.trimmed(opt["label"], max: OPTION_LABEL_MAX)
         Input.invalid! if labels.include?(label)
         labels << label
-        { "key" => option_key(opt["key"]), "label" => label }
+        { "key" => option_key(keep_keys ? opt["key"] : nil), "label" => label }
       end
     end
     private_class_method :valid_options
