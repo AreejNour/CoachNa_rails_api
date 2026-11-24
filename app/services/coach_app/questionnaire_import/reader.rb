@@ -1,18 +1,10 @@
-require "anthropic"
-
 module CoachApp
   module QuestionnaireImport
     # The only class that touches the network. Sends the questionnaire to Claude and returns the raw
     # answer hash (shape in SCHEMA) for the Normalizer; trusts nothing in it.
     module Reader
-      MODEL = :"claude-opus-5-5"
       MAX_TOKENS = 32_000
-      # Per attempt in the SDK, so no retries: the answer (or 502) must come before the app's 120 s.
-      TIMEOUT_SECONDS = 100
-      MAX_RETRIES = 0
       LANGUAGES = { "ar" => "Arabic", "en" => "English" }.freeze
-
-      def self.nullable(type, **rest) = { type: [ type, "null" ], **rest }
 
       QUESTION = {
         type: "object", additionalProperties: false,
@@ -21,8 +13,8 @@ module CoachApp
           type: { type: "string", enum: Questions::TYPES },
           label: { type: "string" },
           required: { type: "boolean" },
-          options: nullable("array", items: { type: "string" }),
-          doubt: nullable("string")
+          options: ClaudeJson.nullable("array", items: { type: "string" }),
+          doubt: ClaudeJson.nullable("string")
         }
       }.freeze
 
@@ -98,39 +90,14 @@ module CoachApp
       # language: "ar" or "en". Returns a Hash (the model's answer, untrusted).
       # Raises Unreadable when there is no usable answer, Unavailable when there is none at all.
       def self.call(source, existing_labels:, language:)
-        key = ENV["ANTHROPIC_API_KEY"].to_s
-        raise Unavailable, "ANTHROPIC_API_KEY is not set" if key.empty?
-
-        message = client(key).beta.messages.stream(
-          **request_params(source, existing_labels: existing_labels, language: language)
-        ).accumulated_message
-        parse(message)
-      rescue Anthropic::Errors::Error => e
-        raise Unavailable, e.class.name # class only: messages can quote request or response data
+        ClaudeJson.call(system: INSTRUCTIONS, schema: SCHEMA, max_tokens: MAX_TOKENS,
+                        content: content(source, existing_labels, language))
       end
 
-      def self.client(key)
-        Anthropic::Client.new(api_key: key, timeout: TIMEOUT_SECONDS, max_retries: MAX_RETRIES)
+      def self.content(source, existing_labels, language)
+        [ source_block(source), { type: "text", text: instruction_text(existing_labels, language) } ]
       end
-
-      def self.parse(message) = ClaudeJson.parse(message, Unreadable)
-
-      def self.request_params(source, existing_labels:, language:)
-        {
-          model: MODEL,
-          max_tokens: MAX_TOKENS,
-          thinking: { type: :adaptive },
-          output_config: { effort: :medium, format: { type: :json_schema, schema: SCHEMA } },
-          betas: [ :"server-side-fallback-2026-07-01" ],
-          fallbacks: :default,
-          system_: [ { type: "text", text: INSTRUCTIONS, cache_control: { type: "ephemeral" } } ],
-          messages: [ { role: "user", content: [
-            source_block(source),
-            { type: "text", text: instruction_text(existing_labels, language) }
-          ] } ]
-        }
-      end
-      private_class_method :request_params
+      private_class_method :content
 
       def self.source_block(source)
         case source.kind

@@ -30,11 +30,11 @@ module CoachApp
         xml = nil
         Zip::File.open_buffer(StringIO.new(bytes)) do |zip|
           entry = zip.find_entry(ENTRY) || raise(ApiError.new(400, Source::UNSUPPORTED))
-          raise ApiError.new(400, "file too large") if entry.size > MAX_XML_BYTES
+          raise ApiError.new(400, ImportFile::TOO_LARGE) if entry.size > MAX_XML_BYTES
 
           xml = entry.get_input_stream.read(MAX_XML_BYTES + 1).to_s
         end
-        raise ApiError.new(400, "file too large") if xml.bytesize > MAX_XML_BYTES
+        raise ApiError.new(400, ImportFile::TOO_LARGE) if xml.bytesize > MAX_XML_BYTES
 
         xml
       end

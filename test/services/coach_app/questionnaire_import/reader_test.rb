@@ -8,34 +8,38 @@ class CoachApp::QuestionnaireImport::ReaderTest < ActiveSupport::TestCase
   Unreadable = CoachApp::QuestionnaireImport::Unreadable
   EMPTY = '{"questions":[],"skipped":[]}'.freeze
 
+  def parse(msg) = CoachApp::ClaudeJson.parse(msg, Unreadable)
   def answer(reason, text) = Message.new(reason, [ Block.new(:text, text) ])
 
   def params(source, labels: [], language: "en")
-    Reader.send(:request_params, source, existing_labels: labels, language: language)
+    CoachApp::ClaudeJson.request_params(
+      system: Reader::INSTRUCTIONS, schema: Reader::SCHEMA, max_tokens: Reader::MAX_TOKENS,
+      content: Reader.send(:content, source, labels, language)
+    )
   end
 
   test "parse returns the JSON of a finished answer" do
-    assert_equal({ "questions" => [], "skipped" => [] }, Reader.parse(answer(:end_turn, EMPTY)))
+    assert_equal({ "questions" => [], "skipped" => [] }, parse(answer(:end_turn, EMPTY)))
   end
 
   test "parse refuses a refusal, a cut-off answer and non-JSON" do
-    assert_raises(Unreadable) { Reader.parse(answer(:refusal, "")) }
-    assert_raises(Unreadable) { Reader.parse(answer(:max_tokens, '{"questions":')) }
-    assert_raises(Unreadable) { Reader.parse(answer(:end_turn, "sorry")) }
+    assert_raises(Unreadable) { parse(answer(:refusal, "")) }
+    assert_raises(Unreadable) { parse(answer(:max_tokens, '{"questions":')) }
+    assert_raises(Unreadable) { parse(answer(:end_turn, "sorry")) }
   end
 
   test "after a mid-stream fallback the text after the fallback block wins" do
     msg = Message.new(:end_turn, [ Block.new(:text, '{"questions":[{"x'), Block.new(:fallback, nil), Block.new(:text, EMPTY) ])
-    assert_equal({ "questions" => [], "skipped" => [] }, Reader.parse(msg))
+    assert_equal({ "questions" => [], "skipped" => [] }, parse(msg))
   end
 
   test "a fallback block with only the earlier text falls back to all text" do
     msg = Message.new(:end_turn, [ Block.new(:text, '{"questions":[],'), Block.new(:fallback, nil), Block.new(:text, '"skipped":[]}') ])
-    assert_equal({ "questions" => [], "skipped" => [] }, Reader.parse(msg))
+    assert_equal({ "questions" => [], "skipped" => [] }, parse(msg))
   end
 
   test "unparseable output raises without quoting the model's text" do
-    error = assert_raises(Unreadable) { Reader.parse(answer(:end_turn, "Do you have diabetes Ali Hassan {")) }
+    error = assert_raises(Unreadable) { parse(answer(:end_turn, "Do you have diabetes Ali Hassan {")) }
     assert_no_match(/Ali|Hassan|diabetes/, error.message)
   end
 
@@ -88,8 +92,8 @@ class CoachApp::QuestionnaireImport::ReaderTest < ActiveSupport::TestCase
     streamer = Object.new
     streamer.define_singleton_method(:stream) { |**| raise err }
     fake = Struct.new(:beta).new(Struct.new(:messages).new(streamer))
-    original = Reader.method(:client)
-    Reader.define_singleton_method(:client) { |_key| fake }
+    original = CoachApp::ClaudeJson.method(:client)
+    CoachApp::ClaudeJson.define_singleton_method(:client) { |_key| fake }
     begin
       ENV["ANTHROPIC_API_KEY"] = "k"
       raised = assert_raises(CoachApp::QuestionnaireImport::Unavailable) do
@@ -97,7 +101,7 @@ class CoachApp::QuestionnaireImport::ReaderTest < ActiveSupport::TestCase
       end
       assert_equal err.class.name, raised.message
     ensure
-      Reader.define_singleton_method(:client, original)
+      CoachApp::ClaudeJson.define_singleton_method(:client, original)
       ENV.delete("ANTHROPIC_API_KEY")
     end
   end

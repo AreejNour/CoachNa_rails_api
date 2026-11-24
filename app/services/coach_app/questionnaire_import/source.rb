@@ -35,11 +35,8 @@ module CoachApp
       end
 
       def self.from_file(file)
-        raise ApiError.new(400, UNSUPPORTED) unless file.respond_to?(:read) && file.respond_to?(:size)
-        raise ApiError.new(400, "file too large") if file.size > MAX_BYTES
-
-        bytes = file.read.to_s.b
-        if bytes.start_with?(PlanImport::PDF_MAGIC) then pdf(bytes)
+        bytes = ImportFile.read(file, max_bytes: MAX_BYTES, not_a_file: UNSUPPORTED)
+        if ImportFile.pdf?(bytes) then pdf(bytes)
         elsif bytes.start_with?(PNG_MAGIC) then image(bytes, "image/png")
         elsif bytes.start_with?(JPEG_MAGIC) then image(bytes, "image/jpeg")
         elsif bytes.start_with?(ZIP_MAGIC) then docx(bytes)
@@ -48,21 +45,18 @@ module CoachApp
       end
 
       def self.pdf(bytes)
-        if PlanImport.page_count(bytes) > PlanImport::MAX_PAGES
-          raise ApiError.new(400, "pdf has more than #{PlanImport::MAX_PAGES} pages")
-        end
-
+        ImportFile.check_pdf_pages!(bytes)
         new(kind: :pdf, bytes: bytes, media_type: "application/pdf")
       end
 
       def self.image(bytes, media_type)
-        raise ApiError.new(400, "file too large") if bytes.bytesize > MAX_IMAGE_BYTES
+        raise ApiError.new(400, ImportFile::TOO_LARGE) if bytes.bytesize > MAX_IMAGE_BYTES
 
         new(kind: :image, bytes: bytes, media_type: media_type)
       end
 
       def self.docx(bytes)
-        raise ApiError.new(400, "file too large") if bytes.bytesize > MAX_DOCX_BYTES
+        raise ApiError.new(400, ImportFile::TOO_LARGE) if bytes.bytesize > MAX_DOCX_BYTES
         raise ApiError.new(400, UNSUPPORTED) unless DocxText.entry?(bytes)
 
         text = DocxText.call(bytes)
