@@ -12,5 +12,10 @@ module Admin
                                    .search(@q)
                                    .order(created_at: :desc)
     end
+
+    def show
+      @subscription = Subscription.includes(:client, :coach, :coach_package, :payments)
+                                  .find(params[:id])
+    end
   end
 end

@@ -69,4 +69,46 @@ class Admin::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     get admin_subscriptions_path
     assert_redirected_to "/admin/login"
   end
+
+  test "show renders the subscription, client, coach, package and price" do
+    sign_in
+    sub = make_subscription(client_name: "Layla Hassan", coach_name: "Mona Coach",
+                            client_phone: "+201119998877")
+
+    get admin_subscription_path(sub)
+    assert_response :ok
+    assert_includes @response.body, "Layla Hassan"
+    assert_includes @response.body, "+201119998877"
+    assert_includes @response.body, "Mona Coach"
+    assert_includes @response.body, "Gold Plan"
+    assert_includes @response.body, "EGP 500.00"
+  end
+
+  test "show lists a payment on the subscription" do
+    sign_in
+    sub = make_subscription(client_name: "Paid Pam", coach_name: "Coach A")
+    Payment.create!(client_id: sub.client_id, purpose: "subscription", subscription_id: sub.id,
+                    amount_piastres: 50_000, provider: "simulated", status: "paid",
+                    paid_at: Time.current)
+
+    get admin_subscription_path(sub)
+    assert_response :ok
+    assert_includes @response.body, "EGP 500.00"
+    assert_includes @response.body, "Paid"
+  end
+
+  test "show handles a subscription with no payments" do
+    sign_in
+    sub = make_subscription(client_name: "Nopay Ned", coach_name: "Coach A")
+
+    get admin_subscription_path(sub)
+    assert_response :ok
+    assert_includes @response.body, "No payments recorded."
+  end
+
+  test "show redirects to login when not signed in" do
+    sub = make_subscription(client_name: "Layla Hassan", coach_name: "Coach A")
+    get admin_subscription_path(sub)
+    assert_redirected_to "/admin/login"
+  end
 end
