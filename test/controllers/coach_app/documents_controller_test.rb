@@ -171,7 +171,7 @@ class CoachApp::DocumentsControllerTest < ActionDispatch::IntegrationTest
     assert CoachDocument.exists?(old.id)
   end
 
-  %w[pending_review approved suspended deactivated].each do |status|
+  %w[pending_review approved suspended deactivated rejected].each do |status|
     test "a coach who is #{status} can't upload or delete" do
       document = @coach.coach_documents.create!(type: "certificate", storage_key: "k", mime_type: "image/jpeg", size_bytes: 1)
       @coach.update!(status: status)
@@ -187,7 +187,7 @@ class CoachApp::DocumentsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  %w[incomplete rejected].each do |status|
+  %w[incomplete].each do |status|
     test "a coach who is #{status} can upload and delete" do
       @coach.update!(status: status)
 
