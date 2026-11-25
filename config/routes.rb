@@ -55,6 +55,16 @@ Rails.application.routes.draw do
     get "notifications/unread-count", to: "notifications#unread_count"
   end
 
+  # Admin panel (server-rendered, session-authed): module `admin`, path `/admin`.
+  scope path: "admin", module: "admin", as: "admin" do
+    get "login", to: "sessions#new", as: :login
+    post "login", to: "sessions#create"
+    delete "logout", to: "sessions#destroy", as: :logout
+    get "", to: "coaches#index", as: :root
+    get "coaches/:id", to: "coaches#show", as: :coach
+    get "coaches/:id/documents/:document_id", to: "coaches#document", as: :coach_document
+  end
+
   # Last, so every unknown path gets a 404 in the API's envelope.
   match "/", to: "application#route_not_found", via: :all
   match "*path", to: "application#route_not_found", via: :all, format: false

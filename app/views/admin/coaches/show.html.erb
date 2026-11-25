@@ -1,0 +1,29 @@
+<p><%= link_to "← Back to review list", admin_root_path %></p>
+
+<h1><%= @coach.full_name %></h1>
+<p>Status: <strong><%= @coach.status %></strong></p>
+
+<dl>
+  <dt>Phone</dt><dd><%= @coach.phone %></dd>
+  <dt>Email</dt><dd><%= @coach.email %></dd>
+  <dt>Specialties</dt><dd><%= Array(@coach.specialties).join(", ") %></dd>
+  <dt>Years of experience</dt><dd><%= @coach.years_experience %></dd>
+  <dt>Submitted</dt><dd><%= @coach.profile_submitted_at&.strftime("%Y-%m-%d %H:%M") %></dd>
+</dl>
+
+<h2>Bio</h2>
+<p><%= @coach.bio.presence || "—" %></p>
+
+<h2>Documents</h2>
+<% if @documents.empty? %>
+  <p>No documents uploaded.</p>
+<% else %>
+  <ul>
+    <% @documents.each do |doc| %>
+      <li>
+        <%= link_to doc.type, admin_coach_document_path(@coach, doc), target: "_blank", rel: "noopener" %>
+        <small>(<%= doc.mime_type %>)</small>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

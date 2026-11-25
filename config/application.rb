@@ -44,6 +44,13 @@ module CoachNaRailsApi
     require_relative "../lib/middleware/bad_request_envelope"
     config.middleware.use BadRequestEnvelope
 
+    # The admin panel (module `admin`) is a server-rendered browser app, so add back the
+    # cookies/session/flash middleware the api_only stack drops. The mobile coach API stays
+    # token-authed and writes no session.
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use ActionDispatch::Session::CookieStore, key: "_coachna_admin_session"
+    config.middleware.use ActionDispatch::Flash
+
     # The tables are shared with the Node API, and structure.sql keeps Postgres enums and defaults exactly.
     config.active_record.schema_format = :sql
     # Rails must not rewrite db/structure.sql itself; bin/dump-shared-schema is the only writer.

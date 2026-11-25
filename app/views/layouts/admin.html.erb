@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CoachNa Admin</title>
+  <%= csrf_meta_tags %>
+  <style>
+    body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; color: #1A1C1B; }
+    header { display: flex; align-items: center; justify-content: space-between;
+             padding: 12px 20px; background: #0F7A63; color: #fff; }
+    header form { margin: 0; }
+    main { padding: 20px; max-width: 900px; }
+    .alert { background: #FBEDE9; color: #C5482F; padding: 10px 14px; border-radius: 8px; margin: 16px 20px 0; }
+    button, input[type=submit] { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <% if current_admin %>
+    <header>
+      <strong>CoachNa Admin</strong>
+      <span><%= current_admin.email %> &nbsp; <%= button_to "Log out", admin_logout_path, method: :delete %></span>
+    </header>
+  <% end %>
+  <% if flash[:alert] %><p class="alert" role="alert"><%= flash[:alert] %></p><% end %>
+  <main><%= yield %></main>
+</body>
+</html>

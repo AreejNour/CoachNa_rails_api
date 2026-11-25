@@ -1,0 +1,13 @@
+<h1>CoachNa Admin — Sign in</h1>
+
+<%= form_with url: admin_login_path, method: :post do |f| %>
+  <p>
+    <%= f.label :email, "Email" %><br>
+    <%= f.email_field :email, autofocus: true, autocomplete: "username" %>
+  </p>
+  <p>
+    <%= f.label :password, "Password" %><br>
+    <%= f.password_field :password, autocomplete: "current-password" %>
+  </p>
+  <p><%= f.submit "Sign in" %></p>
+<% end %>

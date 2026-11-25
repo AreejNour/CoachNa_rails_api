@@ -1479,6 +1479,36 @@ ALTER TABLE ONLY public.weight_logs
 
 
 --
+-- Name: admins; Type: TABLE; Schema: public; Owner: -
+-- Rails-owned (admin panel, M33); not part of the Node API schema.
+--
+
+CREATE TABLE public.admins (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email character varying NOT NULL,
+    password_digest character varying NOT NULL,
+    name character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: admins admins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.admins
+    ADD CONSTRAINT admins_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_admins_on_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_admins_on_email ON public.admins USING btree (email);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
