@@ -13,6 +13,14 @@ module Admin
       @review = CoachReview.find(params[:id])
     end
 
+    def approve
+      decision(:approve)
+    end
+
+    def reject
+      decision(:reject)
+    end
+
     # Streams one review photo for admin inspection. No visibility filter — admins
     # can view pending photos. Mirrors CoachApp::Reviews.photo but without the
     # `visible` guard. Cache-Control: no-store (sensitive media).
@@ -28,6 +36,23 @@ module Admin
       end
     rescue Storage::NotFound, Storage::InvalidKey
       head :not_found
+    end
+
+    private
+
+    def decision(action)
+      review = CoachReview.find(params[:id])
+      case action
+      when :approve
+        Admin::ReviewDecision.approve!(review: review, admin: current_admin)
+        flash[:notice] = "Review approved."
+      when :reject
+        Admin::ReviewDecision.reject!(review: review, admin: current_admin)
+        flash[:notice] = "Review rejected."
+      end
+      redirect_to admin_review_path(review)
+    rescue Admin::ReviewDecision::Error => e
+      redirect_to admin_review_path(CoachReview.find(params[:id])), flash: { alert: e.message }
     end
   end
 end

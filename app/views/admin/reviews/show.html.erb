@@ -26,3 +26,17 @@
     <% end %>
   </ul>
 <% end %>
+
+<h2>Moderation</h2>
+<% if @review.status == "pending" %>
+  <%= form_with url: admin_approve_review_path(@review), method: :post do %>
+    <%= submit_tag "Approve" %>
+  <% end %>
+
+  <%= form_with url: admin_reject_review_path(@review), method: :post,
+                html: { onsubmit: "return confirm('Reject this review? Its photos will be deleted.')" } do %>
+    <%= submit_tag "Reject" %>
+  <% end %>
+<% else %>
+  <p>Already <%= @review.status %>.</p>
+<% end %>

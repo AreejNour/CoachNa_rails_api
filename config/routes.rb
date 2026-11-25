@@ -66,6 +66,8 @@ Rails.application.routes.draw do
     get "reviews", to: "reviews#index", as: :reviews
     get "reviews/:id", to: "reviews#show", as: :review
     get "reviews/:id/photos/:photo_id", to: "reviews#photo", as: :review_photo
+    post "reviews/:id/approve", to: "reviews#approve", as: :approve_review
+    post "reviews/:id/reject", to: "reviews#reject", as: :reject_review
   end
 
   # Last, so every unknown path gets a 404 in the API's envelope.

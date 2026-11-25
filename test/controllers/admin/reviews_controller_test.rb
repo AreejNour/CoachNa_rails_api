@@ -111,4 +111,110 @@ class Admin::ReviewsControllerTest < ActionDispatch::IntegrationTest
     get admin_review_photo_path(review, photo)
     assert_redirected_to "/admin/login"
   end
+
+  # ── approve ───────────────────────────────────────────────────────────────────
+
+  test "approve transitions a pending review to visible and sets flash notice" do
+    sign_in
+    coach  = make_coach("+201000000090")
+    client = make_client("+201000000091")
+    review = make_review(coach: coach, client: client, rating: 5, status: "pending")
+
+    post admin_approve_review_path(review)
+    assert_redirected_to admin_review_path(review)
+    assert_equal "Review approved.", flash[:notice]
+    assert_equal "visible", review.reload.status
+    assert_equal 1, coach.reload.review_count
+  end
+
+  test "approve on an already-visible review sets flash alert and leaves status unchanged" do
+    sign_in
+    coach  = make_coach("+201000000092")
+    client = make_client("+201000000093")
+    review = make_review(coach: coach, client: client, rating: 4, status: "visible")
+
+    post admin_approve_review_path(review)
+    assert_redirected_to admin_review_path(review)
+    assert_match "already", flash[:alert]
+    assert_equal "visible", review.reload.status
+  end
+
+  test "approve unauthenticated redirects to login and does not change status" do
+    coach  = make_coach("+201000000094")
+    client = make_client("+201000000095")
+    review = make_review(coach: coach, client: client, rating: 3, status: "pending")
+
+    post admin_approve_review_path(review)
+    assert_redirected_to "/admin/login"
+    assert_equal "pending", review.reload.status
+  end
+
+  # ── reject ────────────────────────────────────────────────────────────────────
+
+  test "reject transitions a pending review to rejected and sets flash notice" do
+    sign_in
+    coach  = make_coach("+201000000096")
+    client = make_client("+201000000097")
+    review = make_review(coach: coach, client: client, rating: 2, status: "pending")
+    make_photo(review, storage_key: "photos/reject_me.jpg")
+
+    swap_method(Storage.current, :delete, ->(_key) { nil }) do
+      post admin_reject_review_path(review)
+    end
+
+    assert_redirected_to admin_review_path(review)
+    assert_equal "Review rejected.", flash[:notice]
+    assert_equal "rejected", review.reload.status
+  end
+
+  test "reject on an already-visible review sets flash alert and leaves status unchanged" do
+    sign_in
+    coach  = make_coach("+201000000098")
+    client = make_client("+201000000099")
+    review = make_review(coach: coach, client: client, rating: 4, status: "visible")
+
+    post admin_reject_review_path(review)
+    assert_redirected_to admin_review_path(review)
+    assert_match "already", flash[:alert]
+    assert_equal "visible", review.reload.status
+  end
+
+  test "reject unauthenticated redirects to login and does not change status" do
+    coach  = make_coach("+201000000100")
+    client = make_client("+201000000101")
+    review = make_review(coach: coach, client: client, rating: 3, status: "pending")
+
+    post admin_reject_review_path(review)
+    assert_redirected_to "/admin/login"
+    assert_equal "pending", review.reload.status
+  end
+
+  # ── view gating ───────────────────────────────────────────────────────────────
+
+  test "show for a pending review includes Approve and Reject controls with confirm" do
+    sign_in
+    coach  = make_coach("+201000000102")
+    client = make_client("+201000000103")
+    review = make_review(coach: coach, client: client, rating: 4, status: "pending")
+
+    get admin_review_path(review)
+    assert_response :ok
+    assert_includes @response.body, admin_approve_review_path(review)
+    assert_includes @response.body, admin_reject_review_path(review)
+    assert_includes @response.body, "confirm("
+    assert_includes @response.body, "onsubmit="
+  end
+
+  test "show for a visible review shows no approve/reject controls but shows already line" do
+    sign_in
+    coach  = make_coach("+201000000104")
+    client = make_client("+201000000105")
+    review = make_review(coach: coach, client: client, rating: 5, status: "visible")
+
+    get admin_review_path(review)
+    assert_response :ok
+    assert_not_includes @response.body, admin_approve_review_path(review)
+    assert_not_includes @response.body, admin_reject_review_path(review)
+    assert_includes @response.body, "Already"
+  end
 end
