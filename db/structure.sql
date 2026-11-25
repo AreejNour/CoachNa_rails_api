@@ -1509,6 +1509,30 @@ CREATE UNIQUE INDEX index_admins_on_email ON public.admins USING btree (email);
 
 
 --
+-- Name: coach_status_changes; Type: TABLE; Schema: public; Owner: -
+-- Rails-owned (admin panel, M34); not part of the Node API schema.
+--
+
+CREATE TABLE public.coach_status_changes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    coach_id uuid NOT NULL,
+    admin_id uuid NOT NULL,
+    from_status public.coach_status NOT NULL,
+    to_status public.coach_status NOT NULL,
+    reason text,
+    commission_percent numeric(5,2),
+    created_at timestamp(6) without time zone NOT NULL
+);
+ALTER TABLE ONLY public.coach_status_changes
+    ADD CONSTRAINT coach_status_changes_pkey PRIMARY KEY (id);
+CREATE INDEX index_coach_status_changes_on_coach_id ON public.coach_status_changes USING btree (coach_id);
+ALTER TABLE ONLY public.coach_status_changes
+    ADD CONSTRAINT coach_status_changes_coach_id_fk FOREIGN KEY (coach_id) REFERENCES public.coaches(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.coach_status_changes
+    ADD CONSTRAINT coach_status_changes_admin_id_fk FOREIGN KEY (admin_id) REFERENCES public.admins(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
