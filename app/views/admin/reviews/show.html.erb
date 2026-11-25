@@ -1,0 +1,42 @@
+<p><%= link_to "← Back to moderation queue", admin_reviews_path %></p>
+
+<h1>Review #<%= @review.id %></h1>
+
+<dl>
+  <dt>Coach</dt><dd><%= @review.coach.full_name %></dd>
+  <dt>Client</dt><dd><%= @review.client.full_name %></dd>
+  <dt>Rating</dt><dd><%= @review.rating %> / 5</dd>
+  <dt>Status</dt><dd><%= @review.status %></dd>
+  <dt>Submitted</dt><dd><%= @review.created_at&.strftime("%Y-%m-%d %H:%M") %></dd>
+</dl>
+
+<h2>Body</h2>
+<p><%= @review.body.presence || "—" %></p>
+
+<h2>Photos</h2>
+<% if @review.review_photos.empty? %>
+  <p>No photos attached.</p>
+<% else %>
+  <ul>
+    <% @review.review_photos.each do |photo| %>
+      <li>
+        <%= link_to "#{photo.kind} photo", admin_review_photo_path(@review, photo), target: "_blank", rel: "noopener" %>
+        <small>(<%= photo.status %>)</small>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
+<h2>Moderation</h2>
+<% if @review.status == "pending" %>
+  <%= form_with url: admin_approve_review_path(@review), method: :post do %>
+    <%= submit_tag "Approve" %>
+  <% end %>
+
+  <%= form_with url: admin_reject_review_path(@review), method: :post,
+                html: { onsubmit: "return confirm('Reject this review? Its photos will be deleted.')" } do %>
+    <%= submit_tag "Reject" %>
+  <% end %>
+<% else %>
+  <p>Already <%= @review.status %>.</p>
+<% end %>

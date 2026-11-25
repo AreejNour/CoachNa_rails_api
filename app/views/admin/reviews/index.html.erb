@@ -1,0 +1,32 @@
+<h1>Reviews waiting for moderation</h1>
+
+<% if @reviews.empty? %>
+  <p>No reviews are pending moderation.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr>
+        <th>Coach</th>
+        <th>Client</th>
+        <th>Rating</th>
+        <th>Body</th>
+        <th>Submitted</th>
+        <th>Photos</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @reviews.each do |review| %>
+        <tr>
+          <td><%= review.coach.full_name %></td>
+          <td><%= review.client.full_name %></td>
+          <td><%= review.rating %></td>
+          <td><%= truncate(review.body.to_s, length: 80) %></td>
+          <td><%= review.created_at&.strftime("%Y-%m-%d %H:%M") %></td>
+          <td><%= review.review_photos.size %></td>
+          <td><%= link_to "Review", admin_review_path(review) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
