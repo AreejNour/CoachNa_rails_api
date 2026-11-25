@@ -28,39 +28,39 @@ module Admin
 
     def approve
       coach = Coach.find(params[:id])
-      decision(coach) { Admin::CoachDecision.approve!(coach: coach, admin: current_admin, commission: params[:commission]) }
+      decision(coach, "Coach approved.") { Admin::CoachDecision.approve!(coach: coach, admin: current_admin, commission: params[:commission]) }
     end
 
     def request_changes
       coach = Coach.find(params[:id])
-      decision(coach) { Admin::CoachDecision.request_changes!(coach: coach, admin: current_admin, reason: params[:reason]) }
+      decision(coach, "Changes requested.") { Admin::CoachDecision.request_changes!(coach: coach, admin: current_admin, reason: params[:reason]) }
     end
 
     def reject
       coach = Coach.find(params[:id])
-      decision(coach) { Admin::CoachDecision.reject!(coach: coach, admin: current_admin, reason: params[:reason]) }
+      decision(coach, "Coach rejected.") { Admin::CoachDecision.reject!(coach: coach, admin: current_admin, reason: params[:reason]) }
     end
 
     def suspend
       coach = Coach.find(params[:id])
-      decision(coach) { Admin::CoachDecision.suspend!(coach: coach, admin: current_admin, reason: params[:reason]) }
+      decision(coach, "Coach suspended.") { Admin::CoachDecision.suspend!(coach: coach, admin: current_admin, reason: params[:reason]) }
     end
 
     def reactivate
       coach = Coach.find(params[:id])
-      decision(coach) { Admin::CoachDecision.reactivate!(coach: coach, admin: current_admin, reason: params[:reason]) }
+      decision(coach, "Coach reactivated.") { Admin::CoachDecision.reactivate!(coach: coach, admin: current_admin, reason: params[:reason]) }
     end
 
     def deactivate
       coach = Coach.find(params[:id])
-      decision(coach) { Admin::CoachDecision.deactivate!(coach: coach, admin: current_admin, reason: params[:reason]) }
+      decision(coach, "Coach deactivated.") { Admin::CoachDecision.deactivate!(coach: coach, admin: current_admin, reason: params[:reason]) }
     end
 
     private
 
-    def decision(coach)
+    def decision(coach, notice)
       yield
-      flash[:notice] = "Action completed successfully."
+      flash[:notice] = notice
     rescue Admin::CoachDecision::Error => e
       flash[:alert] = e.message
     ensure

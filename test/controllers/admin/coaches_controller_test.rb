@@ -221,4 +221,37 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes @response.body, "Approve"
     assert_not_includes @response.body, "Reactivate"
   end
+
+  # ---------------------------------------------------------------------------
+  # I1: terminal-action confirm guard (onsubmit= with confirm()
+  # ---------------------------------------------------------------------------
+
+  test "show for pending_review coach reject form carries onsubmit confirm guard" do
+    sign_in
+    coach = make_coach("Pending Pat", "pending_review", "+201000000050")
+    get admin_coach_path(coach)
+    assert_response :ok
+    assert_match(/onsubmit=.*confirm\(/, @response.body)
+  end
+
+  test "show for approved coach deactivate form carries onsubmit confirm guard" do
+    sign_in
+    coach = make_coach("Active Coach", "approved", "+201000000051")
+    get admin_coach_path(coach)
+    assert_response :ok
+    assert_match(/onsubmit=.*confirm\(/, @response.body)
+  end
+
+  # ---------------------------------------------------------------------------
+  # M3: per-action flash messages
+  # ---------------------------------------------------------------------------
+
+  test "approve flashes 'Coach approved.'" do
+    sign_in
+    coach = make_coach("Pending Pat", "pending_review", "+201000000060")
+    post admin_approve_coach_path(coach), params: { commission: "10" }
+    assert_redirected_to admin_coach_path(coach)
+    follow_redirect!
+    assert_includes @response.body, "Coach approved."
+  end
 end
