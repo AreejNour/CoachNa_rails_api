@@ -12,6 +12,26 @@ module CoachApp
         title: { "ar" => "طلبك يحتاج إلى تعديلات", "en" => "Your application needs changes" },
         body: { "ar" => "افتح التطبيق لمعرفة التعديلات المطلوبة.", "en" => "Open the app to see what to change." },
         screen: "coach_needs_changes"
+      },
+      rejected: {
+        title: { "ar" => "تم رفض طلبك", "en" => "Your application was declined" },
+        body: { "ar" => "افتح التطبيق لمعرفة السبب", "en" => "Open the app to see why." },
+        screen: "coach_status"
+      },
+      suspended: {
+        title: { "ar" => "تم إيقاف حسابك مؤقتًا", "en" => "Your account is suspended" },
+        body: { "ar" => "افتح التطبيق لمعرفة السبب", "en" => "Open the app to see why." },
+        screen: "coach_status"
+      },
+      reactivated: {
+        title: { "ar" => "تم تفعيل حسابك مجددًا", "en" => "Your account is active again" },
+        body: { "ar" => "يمكنك استقبال العملاء مرة أخرى", "en" => "You can take clients again." },
+        screen: "coach_home"
+      },
+      deactivated: {
+        title: { "ar" => "تم إلغاء تفعيل حسابك", "en" => "Your account was deactivated" },
+        body: { "ar" => "افتح التطبيق لمعرفة السبب", "en" => "Open the app to see why." },
+        screen: "coach_status"
       }
     }.freeze
 

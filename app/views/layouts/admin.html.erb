@@ -22,6 +22,7 @@
       <span><%= current_admin.email %> &nbsp; <%= button_to "Log out", admin_logout_path, method: :delete %></span>
     </header>
   <% end %>
+  <% if flash[:notice] %><p class="notice" role="status"><%= flash[:notice] %></p><% end %>
   <% if flash[:alert] %><p class="alert" role="alert"><%= flash[:alert] %></p><% end %>
   <main><%= yield %></main>
 </body>

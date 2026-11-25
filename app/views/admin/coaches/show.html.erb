@@ -27,3 +27,59 @@
     <% end %>
   </ul>
 <% end %>
+
+<h2>Admin Actions</h2>
+
+<% if @coach.status == "pending_review" %>
+  <%= form_with url: admin_approve_coach_path(@coach), method: :post do |f| %>
+    <label>Commission (%): <%= f.number_field :commission, step: "any", min: 0, max: 100, required: true %></label>
+    <%= f.submit "Approve" %>
+  <% end %>
+
+  <%= form_with url: admin_request_changes_coach_path(@coach), method: :post do |f| %>
+    <label for="request_changes_reason">Reason:</label>
+    <%= f.text_area :reason, id: "request_changes_reason", required: true %>
+    <%= f.submit "Request changes" %>
+  <% end %>
+
+  <%= form_with url: admin_reject_coach_path(@coach), method: :post,
+        data: { confirm: "Reject this coach? This cannot be undone." },
+        html: { onsubmit: "return confirm('Reject this coach? This cannot be undone.')" } do |f| %>
+    <label for="reject_reason">Reason:</label>
+    <%= f.text_area :reason, id: "reject_reason", required: true %>
+    <%= f.submit "Reject" %>
+  <% end %>
+
+<% elsif @coach.status == "approved" %>
+  <%= form_with url: admin_suspend_coach_path(@coach), method: :post do |f| %>
+    <label for="suspend_reason">Reason:</label>
+    <%= f.text_area :reason, id: "suspend_reason", required: true %>
+    <%= f.submit "Suspend" %>
+  <% end %>
+
+  <%= form_with url: admin_deactivate_coach_path(@coach), method: :post,
+        data: { confirm: "Deactivate this coach? This cannot be undone." },
+        html: { onsubmit: "return confirm('Deactivate this coach? This cannot be undone.')" } do |f| %>
+    <label for="deactivate_reason">Reason:</label>
+    <%= f.text_area :reason, id: "deactivate_reason", required: true %>
+    <%= f.submit "Deactivate" %>
+  <% end %>
+
+<% elsif @coach.status == "suspended" %>
+  <%= form_with url: admin_reactivate_coach_path(@coach), method: :post do |f| %>
+    <label for="reactivate_reason">Reason:</label>
+    <%= f.text_area :reason, id: "reactivate_reason", required: true %>
+    <%= f.submit "Reactivate" %>
+  <% end %>
+
+  <%= form_with url: admin_deactivate_coach_path(@coach), method: :post,
+        data: { confirm: "Deactivate this coach? This cannot be undone." },
+        html: { onsubmit: "return confirm('Deactivate this coach? This cannot be undone.')" } do |f| %>
+    <label for="deactivate_suspended_reason">Reason:</label>
+    <%= f.text_area :reason, id: "deactivate_suspended_reason", required: true %>
+    <%= f.submit "Deactivate" %>
+  <% end %>
+
+<% else %>
+  <p>No actions available for this coach's current status.</p>
+<% end %>

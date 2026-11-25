@@ -142,14 +142,24 @@ class CoachApp::ReviewControllerTest < ActionDispatch::IntegrationTest
     assert_nil @coach.profile_submitted_at
   end
 
-  test "a rejected coach can submit again, which clears the reason" do
+  test "an incomplete coach whose changes were requested can resubmit, which clears the reason" do
     complete_everything
-    @coach.update!(status: "rejected", rejection_reason: "Too blurry")
+    @coach.update!(status: "incomplete", rejection_reason: "Too blurry")
 
     submit
 
     assert_response :ok
     assert_nil @coach.reload.rejection_reason
+  end
+
+  test "a rejected coach can't submit (reject is final)" do
+    complete_everything
+    @coach.update!(status: "rejected", rejection_reason: "Permanently rejected")
+
+    submit
+
+    assert_failure :conflict, "profile not submittable in current state"
+    assert_equal "rejected", @coach.reload.status
   end
 
   %w[pending_review approved suspended deactivated].each do |status|

@@ -160,7 +160,7 @@ class CoachApp::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Hi", "incomplete", nil, "x", 0 ], [ @coach.bio, @coach.status, @coach.commission_percent, @coach.password_hash, @coach.review_count ]
   end
 
-  %w[pending_review approved suspended deactivated].each do |status|
+  %w[pending_review approved suspended deactivated rejected].each do |status|
     test "a coach who is #{status} can't edit" do
       @coach.update!(status: status)
       patch_profile(bio: "Hi")
@@ -170,7 +170,7 @@ class CoachApp::ProfilesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  %w[incomplete rejected].each do |status|
+  %w[incomplete].each do |status|
     test "a coach who is #{status} can edit" do
       @coach.update!(status: status)
       patch_profile(bio: "Hi")

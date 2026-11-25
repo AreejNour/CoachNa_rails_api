@@ -13,8 +13,8 @@ class CoachTest < ActiveSupport::TestCase
     assert_equal %w[weight_loss muscle_gain diabetes_friendly sports womens_health general], Coach::SPECIALTIES
   end
 
-  test "EDITABLE_STATUSES are incomplete and rejected" do
-    assert_equal %w[incomplete rejected], Coach::EDITABLE_STATUSES
+  test "EDITABLE_STATUSES is only incomplete (rejected is final)" do
+    assert_equal %w[incomplete], Coach::EDITABLE_STATUSES
   end
 
   test "a refresh token belongs to its coach" do
