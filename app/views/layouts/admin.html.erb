@@ -19,6 +19,10 @@
   <% if current_admin %>
     <header>
       <strong>CoachNa Admin</strong>
+      <nav style="display:inline-flex; gap:16px; align-items:center;">
+        <%= link_to "Coaches", admin_root_path, style: "color:#fff;" %>
+        <%= link_to "Subscriptions", admin_subscriptions_path, style: "color:#fff;" %>
+      </nav>
       <span><%= current_admin.email %> &nbsp; <%= button_to "Log out", admin_logout_path, method: :delete %></span>
     </header>
   <% end %>

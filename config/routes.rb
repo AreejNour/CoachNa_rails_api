@@ -63,6 +63,8 @@ Rails.application.routes.draw do
     get "", to: "coaches#index", as: :root
     get "coaches/:id", to: "coaches#show", as: :coach
     get "coaches/:id/documents/:document_id", to: "coaches#document", as: :coach_document
+    get "subscriptions", to: "subscriptions#index", as: :subscriptions
+    get "subscriptions/:id", to: "subscriptions#show", as: :subscription
   end
 
   # Last, so every unknown path gets a 404 in the API's envelope.
