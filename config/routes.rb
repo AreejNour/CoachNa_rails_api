@@ -63,6 +63,12 @@ Rails.application.routes.draw do
     get "", to: "coaches#index", as: :root
     get "coaches/:id", to: "coaches#show", as: :coach
     get "coaches/:id/documents/:document_id", to: "coaches#document", as: :coach_document
+    post "coaches/:id/approve", to: "coaches#approve", as: :approve_coach
+    post "coaches/:id/request-changes", to: "coaches#request_changes", as: :request_changes_coach
+    post "coaches/:id/reject", to: "coaches#reject", as: :reject_coach
+    post "coaches/:id/suspend", to: "coaches#suspend", as: :suspend_coach
+    post "coaches/:id/reactivate", to: "coaches#reactivate", as: :reactivate_coach
+    post "coaches/:id/deactivate", to: "coaches#deactivate", as: :deactivate_coach
   end
 
   # Last, so every unknown path gets a 404 in the API's envelope.

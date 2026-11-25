@@ -27,3 +27,48 @@
     <% end %>
   </ul>
 <% end %>
+
+<h2>Admin Actions</h2>
+<% if flash[:notice] %><p style="color:green"><%= flash[:notice] %></p><% end %>
+
+<% if @coach.status == "pending_review" %>
+  <%= form_with url: admin_approve_coach_path(@coach), method: :post do |f| %>
+    <label>Commission (%): <%= f.number_field :commission, step: "any", min: 0, max: 100, required: true %></label>
+    <%= f.submit "Approve" %>
+  <% end %>
+
+  <%= form_with url: admin_request_changes_coach_path(@coach), method: :post do |f| %>
+    <label>Reason: <%= f.text_area :reason, required: true %></label>
+    <%= f.submit "Request changes" %>
+  <% end %>
+
+  <%= form_with url: admin_reject_coach_path(@coach), method: :post, data: { confirm: "Reject this coach? This cannot be undone." } do |f| %>
+    <label>Reason: <%= f.text_area :reason, required: true %></label>
+    <%= f.submit "Reject" %>
+  <% end %>
+
+<% elsif @coach.status == "approved" %>
+  <%= form_with url: admin_suspend_coach_path(@coach), method: :post do |f| %>
+    <label>Reason: <%= f.text_area :reason, required: true %></label>
+    <%= f.submit "Suspend" %>
+  <% end %>
+
+  <%= form_with url: admin_deactivate_coach_path(@coach), method: :post, data: { confirm: "Deactivate this coach? This cannot be undone." } do |f| %>
+    <label>Reason: <%= f.text_area :reason, required: true %></label>
+    <%= f.submit "Deactivate" %>
+  <% end %>
+
+<% elsif @coach.status == "suspended" %>
+  <%= form_with url: admin_reactivate_coach_path(@coach), method: :post do |f| %>
+    <label>Reason: <%= f.text_area :reason, required: true %></label>
+    <%= f.submit "Reactivate" %>
+  <% end %>
+
+  <%= form_with url: admin_deactivate_coach_path(@coach), method: :post, data: { confirm: "Deactivate this coach? This cannot be undone." } do |f| %>
+    <label>Reason: <%= f.text_area :reason, required: true %></label>
+    <%= f.submit "Deactivate" %>
+  <% end %>
+
+<% else %>
+  <p>No actions available for this coach's current status.</p>
+<% end %>
