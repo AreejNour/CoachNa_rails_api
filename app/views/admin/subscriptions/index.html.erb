@@ -1,0 +1,39 @@
+<h1>Subscriptions</h1>
+
+<%= form_with url: admin_subscriptions_path, method: :get do %>
+  <input type="text" name="q" value="<%= @q %>" placeholder="Client name, phone, or coach">
+  <select name="status">
+    <option value="">All statuses</option>
+    <% Admin::SubscriptionsController::STATUSES.each do |s| %>
+      <option value="<%= s %>" <%= "selected" if @status == s %>><%= s.humanize %></option>
+    <% end %>
+  </select>
+  <%= submit_tag "Search" %>
+<% end %>
+
+<% if @subscriptions.empty? %>
+  <p>No subscriptions match.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr>
+        <th>Client</th><th>Coach</th><th>Package</th><th>Status</th>
+        <th>Price</th><th>Started</th><th>Ends</th><th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @subscriptions.each do |sub| %>
+        <tr>
+          <td><%= link_to sub.client.full_name, admin_subscription_path(sub) %></td>
+          <td><%= sub.coach.full_name %></td>
+          <td><%= sub.coach_package&.name %></td>
+          <td><%= sub.status.humanize %></td>
+          <td><%= number_to_currency(sub.price_piastres / 100.0, unit: "EGP ", precision: 2) %></td>
+          <td><%= sub.starts_at&.strftime("%Y-%m-%d") %></td>
+          <td><%= sub.ends_at&.strftime("%Y-%m-%d") %></td>
+          <td><%= sub.created_at&.strftime("%Y-%m-%d %H:%M") %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
