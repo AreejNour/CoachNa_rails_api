@@ -76,6 +76,7 @@ Rails.application.routes.draw do
     post "reviews/:id/reject", to: "reviews#reject", as: :reject_review
     get "subscriptions", to: "subscriptions#index", as: :subscriptions
     get "subscriptions/:id", to: "subscriptions#show", as: :subscription
+    get "money", to: "money#index", as: :money
   end
 
   # Last, so every unknown path gets a 404 in the API's envelope.

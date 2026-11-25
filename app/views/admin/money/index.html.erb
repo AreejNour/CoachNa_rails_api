@@ -1,0 +1,32 @@
+<% t = @overview.totals %>
+<% egp = ->(piastres) { number_to_currency(piastres / 100.0, unit: "EGP ", precision: 2) } %>
+
+<h1>Money overview</h1>
+
+<section style="display:flex; gap:24px; margin:16px 0;">
+  <div><strong><%= egp.(t.gross_piastres) %></strong><br>Gross income</div>
+  <div><strong><%= egp.(t.commission_piastres) %></strong><br>CoachNa commission</div>
+  <div><strong><%= egp.(t.net_piastres) %></strong><br>Owed to coaches</div>
+</section>
+<p>From <%= t.subscription_count %> paid subscription<%= "s" unless t.subscription_count == 1 %> across <%= t.coach_count %> coach<%= "es" unless t.coach_count == 1 %>.</p>
+
+<% if @overview.coaches.empty? %>
+  <p>No paid subscriptions yet.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr><th>Coach</th><th>Income</th><th>CoachNa commission</th><th>Owed</th><th>Paid subs</th></tr>
+    </thead>
+    <tbody>
+      <% @overview.coaches.each do |c| %>
+        <tr>
+          <td><%= c.coach_name %></td>
+          <td><%= egp.(c.gross_piastres) %></td>
+          <td><%= egp.(c.commission_piastres) %></td>
+          <td><%= egp.(c.net_piastres) %></td>
+          <td><%= c.subscription_count %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
