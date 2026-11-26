@@ -1,0 +1,50 @@
+<div class="card">
+  <div class="card-head" style="display:block">
+    <div class="filters">
+      <%= link_to "Active", admin_coach_path(@coach, tab: "clients", filter: "active"),
+            class: "pill #{'active' if @client_filter == 'active'}" %>
+      <%= link_to "All", admin_coach_path(@coach, tab: "clients", filter: "all"),
+            class: "pill #{'active' if @client_filter == 'all'}" %>
+    </div>
+  </div>
+
+  <% if @clients.rows.empty? %>
+    <div class="card-body">
+      <p class="muted" style="padding:14px 0">
+        <%= @client_filter == "active" ? "No active clients." : "No clients yet." %>
+      </p>
+    </div>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>Client</th><th>Account</th><th>Subscription</th><th>Started</th></tr>
+      </thead>
+      <tbody>
+        <% @clients.rows.each do |row| %>
+          <tr>
+            <td><span class="name"><%= link_to row.client.full_name, admin_client_path(row.client) %></span></td>
+            <td><%= status_pill(row.client.status) %></td>
+            <td><%= status_pill(row.latest_status) %></td>
+            <td><small><%= row.latest_started_at&.strftime("%Y-%m-%d") || "—" %></small></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <% if @clients.total_pages > 1 %>
+      <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <% if @clients.page > 1 %>
+          <%= link_to "← Prev", admin_coach_path(@coach, tab: "clients", filter: @client_filter, page: @clients.page - 1), class: "btn" %>
+        <% else %>
+          <span></span>
+        <% end %>
+        <span class="muted">Page <%= @clients.page %> of <%= @clients.total_pages %></span>
+        <% if @clients.page < @clients.total_pages %>
+          <%= link_to "Next →", admin_coach_path(@coach, tab: "clients", filter: @client_filter, page: @clients.page + 1), class: "btn" %>
+        <% else %>
+          <span></span>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

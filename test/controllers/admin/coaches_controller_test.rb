@@ -14,6 +14,20 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
                   specialties: [ "weight_loss" ], profile_submitted_at: submitted)
   end
 
+  @@client_seq = 0
+  def make_client(name)
+    @@client_seq += 1
+    Client.create!(full_name: name, phone: format("+20199%07d", @@client_seq), password_hash: "h")
+  end
+
+  def sub(coach, client, status:, starts_at: Time.current)
+    pkg = CoachPackage.create!(coach: coach, name: "Plan", price_piastres: 50_000,
+                               duration_days: 30, includes: {})
+    Subscription.create!(client: client, coach: coach, package_id: pkg.id, status: status,
+                         price_piastres: 50_000, commission_percent: 10, commission_piastres: 5_000,
+                         starts_at: starts_at, ends_at: starts_at + 30.days)
+  end
+
   test "index lists coaches of every status by default" do
     sign_in
     make_coach("Pending Pat", "pending_review", "+201000000001")
@@ -276,5 +290,66 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_coach_path(coach)
     follow_redirect!
     assert_includes @response.body, "Coach approved."
+  end
+
+  # ---------------------------------------------------------------------------
+  # Profile + Clients tabs
+  # ---------------------------------------------------------------------------
+
+  test "coach show defaults to the profile tab" do
+    sign_in
+    coach = make_coach("Approved Amy", "approved", "+201000000070")
+    get admin_coach_path(coach)
+    assert_response :ok
+    assert_includes @response.body, "Application"
+  end
+
+  test "clients tab lists only active clients by default, each name linked" do
+    sign_in
+    coach = make_coach("Approved Amy", "approved", "+201000000071")
+    live = make_client("Live Lara"); sub(coach, live, status: "active")
+    ended = make_client("Ended Ed"); sub(coach, ended, status: "ended")
+
+    get admin_coach_path(coach, tab: "clients")
+    assert_response :ok
+    assert_includes @response.body, "Live Lara"
+    assert_includes @response.body, admin_client_path(live)
+    assert_not_includes @response.body, "Ended Ed"
+  end
+
+  test "clients tab filter=all shows every client" do
+    sign_in
+    coach = make_coach("Approved Amy", "approved", "+201000000072")
+    live = make_client("Live Lara"); sub(coach, live, status: "active")
+    ended = make_client("Ended Ed"); sub(coach, ended, status: "ended")
+
+    get admin_coach_path(coach, tab: "clients", filter: "all")
+    assert_response :ok
+    assert_includes @response.body, "Live Lara"
+    assert_includes @response.body, "Ended Ed"
+  end
+
+  test "clients tab empty state for a coach with no clients" do
+    sign_in
+    coach = make_coach("Approved Amy", "approved", "+201000000073")
+    get admin_coach_path(coach, tab: "clients")
+    assert_response :ok
+    assert_includes @response.body, "No active clients"
+  end
+
+  test "unknown tab falls back to profile" do
+    sign_in
+    coach = make_coach("Approved Amy", "approved", "+201000000074")
+    get admin_coach_path(coach, tab: "bogus")
+    assert_response :ok
+    assert_includes @response.body, "Application"
+  end
+
+  test "out-of-range page does not error" do
+    sign_in
+    coach = make_coach("Approved Amy", "approved", "+201000000075")
+    sub(coach, make_client("Live Lara"), status: "active")
+    get admin_coach_path(coach, tab: "clients", page: "999")
+    assert_response :ok
   end
 end

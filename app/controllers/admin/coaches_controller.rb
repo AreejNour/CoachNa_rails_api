@@ -22,6 +22,14 @@ module Admin
     def show
       @coach = Coach.find(params[:id])
       @documents = @coach.coach_documents.order(:type)
+      @tab = params[:tab] == "clients" ? "clients" : "profile"
+
+      return unless @tab == "clients"
+
+      @client_filter = params[:filter] == "all" ? "all" : "active"
+      @clients = Admin::CoachClientsQuery.call(
+        coach: @coach, filter: @client_filter, page: params[:page].to_i, per_page: 25,
+      )
     end
 
     # Streams one of a coach's documents (ID/certificate images) for review. No-store, since
