@@ -79,7 +79,7 @@ class CoachApp::ClientsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, data["count"]
   end
 
-  %w[pending_payment payment_failed].each do |status|
+  %w[checkout_open pending_payment payment_failed].each do |status|
     test "a #{status} subscription is not listed, not counted, and its detail is 404" do
       unpaid = make_sub(make_client("Unpaid"))
       unpaid.update!(status: status)
@@ -136,7 +136,7 @@ class CoachApp::ClientsControllerTest < ActionDispatch::IntegrationTest
     assert_equal PNG_BYTES, response.body.b
   end
 
-  %w[pending_payment payment_failed].each do |status|
+  %w[checkout_open pending_payment payment_failed].each do |status|
     test "a #{status} subscription's photo is 404" do
       sub = make_sub(make_client)
       q = photo_question

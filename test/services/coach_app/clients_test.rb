@@ -116,16 +116,18 @@ class CoachApp::ClientsTest < ActiveSupport::TestCase
     paid = make_subscription(make_client("Paid"))
     unpaid = make_subscription(make_client("Unpaid"), status: "pending_payment")
     failed = make_subscription(make_client("Failed"), status: "payment_failed")
+    open_form = make_subscription(make_client("Card form open"), status: "checkout_open")
     new_client_note(@coach, paid.id, read_at: Time.current)
     new_client_note(@coach, unpaid.id)
     new_client_note(@coach, failed.id)
+    new_client_note(@coach, open_form.id)
 
     result = CoachApp::Clients.list(@coach)
     assert_equal [ "Paid" ], result[:clients].map { |c| c[:fullName] }
     assert_equal 0, result[:newCount]
   end
 
-  %w[pending_payment payment_failed].each do |status|
+  %w[checkout_open pending_payment payment_failed].each do |status|
     test "detail of a #{status} subscription is 404 client not found" do
       unpaid = make_subscription(make_client("Unpaid"), status: status)
       error = assert_raises(ApiError) { CoachApp::Clients.detail(@coach, unpaid.id) }

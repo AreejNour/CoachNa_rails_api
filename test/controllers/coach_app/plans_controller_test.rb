@@ -265,7 +265,7 @@ class CoachApp::PlansControllerTest < ActionDispatch::IntegrationTest
     bad.call({ kind: "bogus", freeText: "x" })
   end
 
-  %w[pending_payment payment_failed].each do |status|
+  %w[checkout_open pending_payment payment_failed].each do |status|
   test "a #{status} subscription's plan is 404 to read, save and publish" do
     unpaid = make_sub(status, client: another_client)
 
