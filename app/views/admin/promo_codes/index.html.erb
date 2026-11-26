@@ -1,0 +1,40 @@
+<div class="page-head">
+  <div>
+    <h1>Promo codes</h1>
+    <div class="sub"><%= pluralize(@codes.size, "code") %><%= " · #{@filter.humanize}" if @filter %> · CoachNa pays the discount</div>
+  </div>
+  <%= link_to "New promo code", new_admin_promo_code_path, class: "btn primary" %>
+</div>
+
+<div class="card">
+  <div class="card-head" style="flex-wrap:wrap;gap:10px">
+    <div class="filters">
+      <%= link_to "All", admin_promo_codes_path, class: "pill #{'active' unless @filter}" %>
+      <% PromoCode::FILTERS.each do |filter| %>
+        <%= link_to filter.humanize, admin_promo_codes_path(filter: filter), class: "pill #{'active' if @filter == filter}" %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @codes.empty? %>
+    <div class="card-body"><p class="muted" style="padding:14px 0">No promo codes in this view.</p></div>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>Code</th><th>Discount</th><th>Dates</th><th class="right">Uses (paid) / limit</th><th>Status</th><th>Created by</th></tr>
+      </thead>
+      <tbody>
+        <% @codes.each do |code| %>
+          <tr>
+            <td><span class="name"><%= link_to code.code, admin_promo_code_path(code) %></span></td>
+            <td><%= promo_discount_label(code) %></td>
+            <td><small><%= promo_dates(code) %></small></td>
+            <td class="right amount"><%= @uses[code.id].to_i %> / <%= code.max_uses || "∞" %></td>
+            <td><%= promo_status_pill(code) %></td>
+            <td><%= code.created_by_admin&.name || "—" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

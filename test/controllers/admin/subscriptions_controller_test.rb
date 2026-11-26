@@ -111,4 +111,58 @@ class Admin::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     get admin_subscription_path(sub)
     assert_redirected_to "/admin/login"
   end
+  test "show displays the promo code and discount" do
+    sign_in
+    sub = make_subscription(client_name: "Promo Pam", coach_name: "Coach A")
+    admin = AdminUser.find_by!(email: "team@coachna.app")
+    promo = PromoCode.create!(code: "SUMMER50", kind: "percent", value: 50, funded_by: "platform",
+                              created_by_admin_id: admin.id)
+    sub.update!(promo_code_id: promo.id, discount_piastres: 25_000, commission_piastres: -20_000)
+
+    get admin_subscription_path(sub)
+    assert_response :ok
+    assert_includes @response.body, "SUMMER50"
+    assert_includes @response.body, "EGP 250.00"
+  end
+
+  test "index shows the promo code and discount on a row" do
+    sign_in
+    sub = make_subscription(client_name: "Promo Pam", coach_name: "Coach A")
+    admin = AdminUser.find_by!(email: "team@coachna.app")
+    promo = PromoCode.create!(code: "SUMMER50", kind: "percent", value: 50, funded_by: "platform",
+                              created_by_admin_id: admin.id)
+    sub.update!(promo_code_id: promo.id, discount_piastres: 25_000)
+
+    get admin_subscriptions_path
+    assert_includes @response.body, "SUMMER50"
+    assert_includes @response.body, "EGP 250.00"
+  end
+
+  test "the default list hides checkout_open rows" do
+    sign_in
+    make_subscription(client_name: "Active Amy", coach_name: "Coach A", status: "active")
+    make_subscription(client_name: "Open Olga", coach_name: "Coach B", status: "checkout_open")
+
+    get admin_subscriptions_path
+    assert_includes @response.body, "Active Amy"
+    assert_not_includes @response.body, "Open Olga"
+  end
+
+  test "the checkout_open filter shows those rows with their label" do
+    sign_in
+    make_subscription(client_name: "Active Amy", coach_name: "Coach A", status: "active")
+    make_subscription(client_name: "Open Olga", coach_name: "Coach B", status: "checkout_open")
+
+    get admin_subscriptions_path(status: "checkout_open")
+    assert_includes @response.body, "Open Olga"
+    assert_not_includes @response.body, "Active Amy"
+    assert_includes @response.body, "Card form opened, not paid"
+  end
+
+  test "the status filter offers checkout_open with its label" do
+    sign_in
+    get admin_subscriptions_path
+    assert_includes @response.body, '<option value="checkout_open"'
+    assert_includes @response.body, "Card form opened, not paid"
+  end
 end

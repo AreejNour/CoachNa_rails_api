@@ -55,5 +55,9 @@ module CoachNaRailsApi
     config.active_record.schema_format = :sql
     # Rails must not rewrite db/structure.sql itself; bin/dump-shared-schema is the only writer.
     config.active_record.dump_schema_after_migration = false
+
+    # CoachNa's commission for a coach with none of their own. Same env var and default as the Node
+    # API (CoachNa_api/src/config.ts), which stamps it onto subscriptions at purchase.
+    config.x.platform_commission_percent = BigDecimal(ENV.fetch("PLATFORM_COMMISSION_PERCENT", "15"))
   end
 end

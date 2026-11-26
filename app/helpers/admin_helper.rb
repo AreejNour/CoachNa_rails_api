@@ -6,7 +6,7 @@ module AdminHelper
     "approved" => "ok", "suspended" => "danger", "deactivated" => "muted",
     # review / subscription / payment statuses
     "pending" => "warn", "pending_payment" => "warn", "trialing" => "warn",
-    "awaiting_questionnaire" => "warn", "awaiting_plan" => "warn",
+    "awaiting_questionnaire" => "warn", "awaiting_plan" => "warn", "checkout_open" => "muted",
     "active" => "ok", "paid" => "ok",
     "rejected" => "danger", "past_due" => "danger", "failed" => "danger",
     "payment_failed" => "danger",
@@ -14,11 +14,54 @@ module AdminHelper
     "expired" => "muted", "refunded" => "muted"
   }.freeze
 
+  # Statuses whose humanized name would mislead.
+  STATUS_LABELS = {
+    "checkout_open" => "Card form opened, not paid"
+  }.freeze
+
+  # The words shown for a status, e.g. "Pending payment".
+  def status_label(status)
+    STATUS_LABELS[status.to_s] || status.to_s.humanize
+  end
+
   # Renders a coloured status badge, e.g. <%= status_pill(coach.status) %>.
   def status_pill(status)
     return "—".html_safe if status.blank?
     kind = PILL_KINDS[status.to_s] || "muted"
-    content_tag(:span, status.to_s.humanize, class: "pill #{kind}")
+    content_tag(:span, status_label(status), class: "pill #{kind}")
+  end
+
+  # Piastres as "EGP 1,234.50"; negative amounts keep their sign.
+  def egp(piastres)
+    number_to_currency(piastres / 100.0, unit: "EGP ", precision: 2, negative_format: "-%u%n")
+  end
+
+  # A promo code's discount, e.g. "30% (max EGP 200.00)" or "EGP 100.00".
+  def promo_discount_label(code)
+    return egp(code.value) if code.fixed?
+
+    label = "#{code.value}%"
+    label += " (max #{egp(code.max_discount_piastres)})" if code.max_discount_piastres
+    label
+  end
+
+  # "Dec 01, 2026 – Jan 01, 2027", with "any time" for an open end.
+  def promo_dates(code)
+    fmt = ->(t) { t&.strftime("%b %d, %Y") }
+    return "Any time" if code.starts_at.nil? && code.ends_at.nil?
+
+    "#{fmt.(code.starts_at) || 'now'} – #{fmt.(code.ends_at) || 'no end'}"
+  end
+
+  # Active / Inactive / Expired badge for a promo code.
+  def promo_status_pill(code)
+    if !code.active
+      content_tag(:span, "Inactive", class: "pill muted")
+    elsif code.expired?
+      content_tag(:span, "Expired", class: "pill muted")
+    else
+      content_tag(:span, "Active", class: "pill ok")
+    end
   end
 
   # Whole years from a date of birth to today; nil when no DOB is on file.

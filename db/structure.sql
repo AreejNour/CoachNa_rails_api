@@ -60,6 +60,20 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: admins; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.admins (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email character varying NOT NULL,
+    password_digest character varying NOT NULL,
+    name character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: client_addresses; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -230,6 +244,22 @@ CREATE TABLE public.coach_reviews (
     CONSTRAINT coach_reviews_body_length CHECK (((body IS NULL) OR ((char_length(body) >= 1) AND (char_length(body) <= 1000)))),
     CONSTRAINT coach_reviews_rating_range CHECK (((rating >= 1) AND (rating <= 5))),
     CONSTRAINT coach_reviews_status_valid CHECK ((status = ANY (ARRAY['pending'::text, 'visible'::text, 'rejected'::text, 'hidden'::text])))
+);
+
+
+--
+-- Name: coach_status_changes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.coach_status_changes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    coach_id uuid NOT NULL,
+    admin_id uuid NOT NULL,
+    from_status public.coach_status NOT NULL,
+    to_status public.coach_status NOT NULL,
+    reason text,
+    commission_percent numeric(5,2),
+    created_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -495,6 +525,49 @@ CREATE TABLE public.plans (
 
 
 --
+-- Name: promo_code_clients; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.promo_code_clients (
+    promo_code_id uuid NOT NULL,
+    client_id uuid NOT NULL
+);
+
+
+--
+-- Name: promo_codes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.promo_codes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    code text NOT NULL,
+    kind text NOT NULL,
+    value integer NOT NULL,
+    max_discount_piastres integer,
+    funded_by text NOT NULL,
+    created_by_admin_id uuid,
+    coach_id uuid,
+    restrict_coach_id uuid,
+    restrict_package_id uuid,
+    min_price_piastres integer,
+    min_duration_days integer,
+    max_duration_days integer,
+    new_patients_only boolean DEFAULT false NOT NULL,
+    starts_at timestamp with time zone,
+    ends_at timestamp with time zone,
+    max_uses integer,
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT promo_codes_code_format CHECK ((code ~ '^[A-Z0-9]{3,20}$'::text)),
+    CONSTRAINT promo_codes_fixed_min CHECK (((kind <> 'fixed'::text) OR (value >= 100))),
+    CONSTRAINT promo_codes_funded_by_valid CHECK ((funded_by = ANY (ARRAY['platform'::text, 'coach'::text]))),
+    CONSTRAINT promo_codes_kind_valid CHECK ((kind = ANY (ARRAY['percent'::text, 'fixed'::text]))),
+    CONSTRAINT promo_codes_percent_range CHECK (((kind <> 'percent'::text) OR ((value >= 1) AND (value <= 99))))
+);
+
+
+--
 -- Name: questionnaire_answers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -595,7 +668,9 @@ CREATE TABLE public.subscriptions (
     starts_at timestamp with time zone NOT NULL,
     ends_at timestamp with time zone NOT NULL,
     questionnaire_submitted_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    promo_code_id uuid,
+    discount_piastres integer DEFAULT 0 NOT NULL
 );
 
 
@@ -622,6 +697,14 @@ CREATE TABLE public.weight_logs (
     weight_kg numeric(5,1) NOT NULL,
     logged_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: admins admins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.admins
+    ADD CONSTRAINT admins_pkey PRIMARY KEY (id);
 
 
 --
@@ -734,6 +817,14 @@ ALTER TABLE ONLY public.coach_refresh_tokens
 
 ALTER TABLE ONLY public.coach_reviews
     ADD CONSTRAINT coach_reviews_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: coach_status_changes coach_status_changes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coach_status_changes
+    ADD CONSTRAINT coach_status_changes_pkey PRIMARY KEY (id);
 
 
 --
@@ -870,6 +961,30 @@ ALTER TABLE ONLY public.plan_options
 
 ALTER TABLE ONLY public.plans
     ADD CONSTRAINT plans_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: promo_code_clients promo_code_clients_promo_code_id_client_id_pk; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_code_clients
+    ADD CONSTRAINT promo_code_clients_promo_code_id_client_id_pk PRIMARY KEY (promo_code_id, client_id);
+
+
+--
+-- Name: promo_codes promo_codes_code_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_code_unique UNIQUE (code);
+
+
+--
+-- Name: promo_codes promo_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_pkey PRIMARY KEY (id);
 
 
 --
@@ -1023,6 +1138,20 @@ CREATE INDEX foods_owner_coach_idx ON public.foods USING btree (owner_coach_id);
 
 
 --
+-- Name: index_admins_on_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_admins_on_email ON public.admins USING btree (email);
+
+
+--
+-- Name: index_coach_status_changes_on_coach_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_coach_status_changes_on_coach_id ON public.coach_status_changes USING btree (coach_id);
+
+
+--
 -- Name: messages_conversation_client_ref; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1114,6 +1243,13 @@ CREATE UNIQUE INDEX plans_subscription_version ON public.plans USING btree (subs
 
 
 --
+-- Name: promo_code_clients_client_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX promo_code_clients_client_idx ON public.promo_code_clients USING btree (client_id);
+
+
+--
 -- Name: questionnaire_answers_one_per_question; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1174,6 +1310,13 @@ CREATE INDEX subscriptions_coach_idx ON public.subscriptions USING btree (coach_
 --
 
 CREATE UNIQUE INDEX subscriptions_one_current ON public.subscriptions USING btree (client_id) WHERE (status <> ALL (ARRAY['ended'::text, 'cancelled'::text, 'payment_failed'::text]));
+
+
+--
+-- Name: subscriptions_promo_code_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX subscriptions_promo_code_idx ON public.subscriptions USING btree (promo_code_id);
 
 
 --
@@ -1279,6 +1422,22 @@ ALTER TABLE ONLY public.coach_reviews
 
 
 --
+-- Name: coach_status_changes coach_status_changes_admin_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coach_status_changes
+    ADD CONSTRAINT coach_status_changes_admin_id_fk FOREIGN KEY (admin_id) REFERENCES public.admins(id);
+
+
+--
+-- Name: coach_status_changes coach_status_changes_coach_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coach_status_changes
+    ADD CONSTRAINT coach_status_changes_coach_id_fk FOREIGN KEY (coach_id) REFERENCES public.coaches(id) ON DELETE CASCADE;
+
+
+--
 -- Name: conversations conversations_subscription_id_subscriptions_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1356,6 +1515,54 @@ ALTER TABLE ONLY public.plan_options
 
 ALTER TABLE ONLY public.plans
     ADD CONSTRAINT plans_subscription_id_subscriptions_id_fk FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: promo_code_clients promo_code_clients_client_id_clients_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_code_clients
+    ADD CONSTRAINT promo_code_clients_client_id_clients_id_fk FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
+
+
+--
+-- Name: promo_code_clients promo_code_clients_promo_code_id_promo_codes_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_code_clients
+    ADD CONSTRAINT promo_code_clients_promo_code_id_promo_codes_id_fk FOREIGN KEY (promo_code_id) REFERENCES public.promo_codes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: promo_codes promo_codes_coach_id_coaches_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_coach_id_coaches_id_fk FOREIGN KEY (coach_id) REFERENCES public.coaches(id);
+
+
+--
+-- Name: promo_codes promo_codes_created_by_admin_id_admins_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_created_by_admin_id_admins_id_fk FOREIGN KEY (created_by_admin_id) REFERENCES public.admins(id);
+
+
+--
+-- Name: promo_codes promo_codes_restrict_coach_id_coaches_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_restrict_coach_id_coaches_id_fk FOREIGN KEY (restrict_coach_id) REFERENCES public.coaches(id);
+
+
+--
+-- Name: promo_codes promo_codes_restrict_package_id_coach_packages_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_restrict_package_id_coach_packages_id_fk FOREIGN KEY (restrict_package_id) REFERENCES public.coach_packages(id);
 
 
 --
@@ -1463,6 +1670,14 @@ ALTER TABLE ONLY public.subscriptions
 
 
 --
+-- Name: subscriptions subscriptions_promo_code_id_promo_codes_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_promo_code_id_promo_codes_id_fk FOREIGN KEY (promo_code_id) REFERENCES public.promo_codes(id);
+
+
+--
 -- Name: water_logs water_logs_client_id_clients_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1476,60 +1691,6 @@ ALTER TABLE ONLY public.water_logs
 
 ALTER TABLE ONLY public.weight_logs
     ADD CONSTRAINT weight_logs_client_id_clients_id_fk FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
-
-
---
--- Name: admins; Type: TABLE; Schema: public; Owner: -
--- Rails-owned (admin panel, M33); not part of the Node API schema.
---
-
-CREATE TABLE public.admins (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    email character varying NOT NULL,
-    password_digest character varying NOT NULL,
-    name character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: admins admins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.admins
-    ADD CONSTRAINT admins_pkey PRIMARY KEY (id);
-
-
---
--- Name: index_admins_on_email; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_admins_on_email ON public.admins USING btree (email);
-
-
---
--- Name: coach_status_changes; Type: TABLE; Schema: public; Owner: -
--- Rails-owned (admin panel, M34); not part of the Node API schema.
---
-
-CREATE TABLE public.coach_status_changes (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    coach_id uuid NOT NULL,
-    admin_id uuid NOT NULL,
-    from_status public.coach_status NOT NULL,
-    to_status public.coach_status NOT NULL,
-    reason text,
-    commission_percent numeric(5,2),
-    created_at timestamp(6) without time zone NOT NULL
-);
-ALTER TABLE ONLY public.coach_status_changes
-    ADD CONSTRAINT coach_status_changes_pkey PRIMARY KEY (id);
-CREATE INDEX index_coach_status_changes_on_coach_id ON public.coach_status_changes USING btree (coach_id);
-ALTER TABLE ONLY public.coach_status_changes
-    ADD CONSTRAINT coach_status_changes_coach_id_fk FOREIGN KEY (coach_id) REFERENCES public.coaches(id) ON DELETE CASCADE;
-ALTER TABLE ONLY public.coach_status_changes
-    ADD CONSTRAINT coach_status_changes_admin_id_fk FOREIGN KEY (admin_id) REFERENCES public.admins(id);
 
 
 --

@@ -18,7 +18,7 @@
           <select name="status" id="status">
             <option value="">All statuses</option>
             <% Admin::SubscriptionsController::STATUSES.each do |s| %>
-              <option value="<%= s %>" <%= "selected" if @status == s %>><%= s.humanize %></option>
+              <option value="<%= s %>" <%= "selected" if @status == s %>><%= status_label(s) %></option>
             <% end %>
           </select>
         </div>
@@ -34,7 +34,7 @@
       <thead>
         <tr>
           <th>Client</th><th>Coach</th><th>Package</th><th>Status</th>
-          <th class="right">Price</th><th>Started</th><th>Ends</th><th>Created</th>
+          <th class="right">Price</th><th>Promo</th><th>Started</th><th>Ends</th><th>Created</th>
         </tr>
       </thead>
       <tbody>
@@ -45,6 +45,13 @@
             <td><%= sub.coach_package&.name %></td>
             <td><%= status_pill(sub.status) %></td>
             <td class="right amount"><%= number_to_currency(sub.price_piastres / 100.0, unit: "EGP ", precision: 2) %></td>
+            <td>
+              <% if sub.promo_code %>
+                <%= link_to sub.promo_code.code, admin_promo_code_path(sub.promo_code) %><br><small>−<%= egp(sub.discount_piastres) %></small>
+              <% else %>
+                <small>—</small>
+              <% end %>
+            </td>
             <td><small><%= sub.starts_at&.strftime("%Y-%m-%d") %></small></td>
             <td><small><%= sub.ends_at&.strftime("%Y-%m-%d") %></small></td>
             <td><small><%= sub.created_at&.strftime("%Y-%m-%d %H:%M") %></small></td>

@@ -108,4 +108,27 @@ class Admin::MoneyOverviewTest < ActiveSupport::TestCase
     assert_equal 0, overview.totals.coach_count
     assert_equal 0, overview.totals.subscription_count
   end
+  test "an admin promo code's negative commission leaves the coach's net at the no-code share" do
+    coach = Coach.create!(full_name: "Promo Coach", phone: uniq_phone, password_hash: "h",
+                          status: "approved", commission_percent: 20)
+    client = Client.create!(full_name: "Promo Client", phone: uniq_phone, password_hash: "h")
+    pkg = CoachPackage.create!(coach: coach, name: "Plan", price_piastres: 90_000, duration_days: 30, includes: {})
+    admin = AdminUser.create!(email: "promo@coachna.app", name: "Promo", password: "Secret123")
+    promo = PromoCode.create!(code: "HALF", kind: "percent", value: 50, funded_by: "platform",
+                              created_by_admin_id: admin.id)
+    # 50% off EGP 900 at 20%: pays 45000, commission 18000 - 45000 = -27000.
+    sub = Subscription.create!(client: client, coach: coach, package_id: pkg.id, status: "active",
+                               price_piastres: 90_000, commission_percent: 20, commission_piastres: -27_000,
+                               discount_piastres: 45_000, promo_code_id: promo.id,
+                               starts_at: Time.current, ends_at: 30.days.from_now)
+    Payment.create!(client_id: client.id, purpose: "subscription", subscription_id: sub.id,
+                    amount_piastres: 45_000, provider: "simulated", status: "paid", paid_at: Time.current)
+
+    row = Admin::MoneyOverview.call.coaches.find { |c| c.coach_id == coach.id }
+
+    assert_equal 45_000, row.gross_piastres
+    assert_equal(-27_000, row.commission_piastres)
+    assert_equal 90_000 * 80 / 100, row.net_piastres
+    assert_equal CoachApp::Earnings.summary(coach)[:summary][:netPiastres], row.net_piastres
+  end
 end
