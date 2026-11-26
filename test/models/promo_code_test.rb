@@ -39,6 +39,17 @@ class PromoCodeTest < ActiveSupport::TestCase
     assert build(code: "A" * 20).valid?
   end
 
+  test "a blank code shows only can't be blank" do
+    code = build(code: "")
+    assert_not code.valid?
+    assert_equal [ "can't be blank" ], code.errors[:code]
+  end
+
+  test "restrictions must point at a real coach and package" do
+    assert_not build(restrict_coach_id: SecureRandom.uuid).valid?
+    assert_not build(restrict_package_id: SecureRandom.uuid).valid?
+  end
+
   test "code is unique ignoring case" do
     build(code: "SUMMER50").save!
     dupe = build(code: "summer50")

@@ -64,7 +64,7 @@
           <select id="promo_code_restrict_coach_id" name="promo_code[restrict_coach_id]">
             <option value="">Any coach</option>
             <% @coaches.each do |coach| %>
-              <option value="<%= coach.id %>" <%= "selected" if f[:restrict_coach_id].to_s == coach.id %>><%= coach.full_name %></option>
+              <option value="<%= coach.id %>" <%= "selected" if f[:restrict_coach_id].to_s == coach.id %>><%= coach.full_name %><%= " (#{coach.status.humanize.downcase})" unless coach.status == "approved" %></option>
             <% end %>
           </select>
         </div>
@@ -74,7 +74,7 @@
             <option value="">Any package</option>
             <% @packages.each do |pkg| %>
               <option value="<%= pkg.id %>" <%= "selected" if f[:restrict_package_id].to_s == pkg.id %>>
-                <%= pkg.coach.full_name %> — <%= pkg.name %> (<%= egp(pkg.price_piastres) %>, <%= pkg.duration_days %> days)
+                <%= pkg.coach.full_name %> — <%= pkg.name %> (<%= egp(pkg.price_piastres) %>, <%= pkg.duration_days %> days)<%= " (inactive)" unless pkg.is_active %>
               </option>
             <% end %>
           </select>

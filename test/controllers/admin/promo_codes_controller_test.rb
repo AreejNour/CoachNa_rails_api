@@ -282,6 +282,49 @@ class Admin::PromoCodesControllerTest < ActionDispatch::IntegrationTest
     assert_not code.reload.active
   end
 
+  test "editing keeps a restriction to an inactive package and a non-approved coach" do
+    sign_in
+    @coach.update!(status: "suspended")
+    @pkg.update!(is_active: false)
+    code = make_code(value: 10, restrict_coach_id: @coach.id, restrict_package_id: @pkg.id)
+
+    get edit_admin_promo_code_path(code)
+    assert_response :ok
+    assert_match(/<option value="#{@coach.id}" selected>Mona Coach \(suspended\)/, @response.body)
+    assert_match(/<option value="#{@pkg.id}" selected>.*Gold Plan.*\(inactive\)/m, @response.body)
+
+    # The browser posts back what the form selected.
+    patch admin_promo_code_path(code), params: form_params(value: "15", restrict_coach_id: @coach.id,
+                                                          restrict_package_id: @pkg.id)
+    assert_redirected_to admin_promo_code_path(code)
+    code.reload
+    assert_equal 15, code.value
+    assert_equal @coach.id, code.restrict_coach_id
+    assert_equal @pkg.id, code.restrict_package_id
+  end
+
+  test "an unknown coach or package id is a form error, not a crash" do
+    sign_in
+    assert_no_difference -> { PromoCode.count } do
+      post admin_promo_codes_path, params: form_params(restrict_coach_id: SecureRandom.uuid)
+    end
+    assert_response :unprocessable_entity
+
+    assert_no_difference -> { PromoCode.count } do
+      post admin_promo_codes_path, params: form_params(restrict_package_id: SecureRandom.uuid)
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test "unknown client ids in the allow-list are dropped" do
+    sign_in
+    a = Client.create!(full_name: "Real Ann", phone: uniq_phone, password_hash: "h")
+    post admin_promo_codes_path, params: form_params(client_ids: [ a.id, SecureRandom.uuid ])
+    code = PromoCode.find_by!(code: "SUMMER50")
+    assert_redirected_to admin_promo_code_path(code)
+    assert_equal [ a.id ], code.promo_code_clients.pluck(:client_id)
+  end
+
   test "there is no delete" do
     sign_in
     code = make_code

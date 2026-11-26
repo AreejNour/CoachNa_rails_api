@@ -15,8 +15,8 @@ class PromoCode < ApplicationRecord
 
   before_validation { self.code = code.to_s.strip.upcase if code }
 
-  validates :code, presence: true, format: { with: /\A[A-Z0-9]{3,20}\z/, message: "must be 3-20 letters or digits" },
-                   uniqueness: { case_sensitive: false }
+  validates :code, presence: true, uniqueness: { case_sensitive: false }
+  validates :code, format: { with: /\A[A-Z0-9]{3,20}\z/, message: "must be 3-20 letters or digits" }, allow_blank: true
   validates :kind, inclusion: { in: KINDS }
   validates :value, numericality: { only_integer: true }
   validates :funded_by, inclusion: { in: %w[platform], message: "must be platform" }
@@ -30,6 +30,7 @@ class PromoCode < ApplicationRecord
   validate :duration_range
   validate :date_range
   validate :package_matches_coach
+  validate :restrictions_exist
 
   scope :expired_now, -> { where(ends_at: ..Time.current) }
   scope :for_filter, lambda { |filter|
@@ -89,6 +90,11 @@ class PromoCode < ApplicationRecord
     return unless min_duration_days && max_duration_days
 
     errors.add(:min_duration_days, "must not be more than the maximum") if min_duration_days > max_duration_days
+  end
+
+  def restrictions_exist
+    errors.add(:restrict_coach_id, "is not a known coach") if restrict_coach_id.present? && restrict_coach.nil?
+    errors.add(:restrict_package_id, "is not a known package") if restrict_package_id.present? && restrict_package.nil?
   end
 
   def package_matches_coach

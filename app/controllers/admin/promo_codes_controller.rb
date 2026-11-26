@@ -125,7 +125,7 @@ module Admin
 
     def selected_client_ids
       if params[:promo_code]&.key?(:client_ids)
-        form_params[:client_ids].to_a.compact_blank
+        Client.where(id: form_params[:client_ids].to_a.compact_blank).pluck(:id)
       elsif @code.persisted?
         @code.promo_code_clients.pluck(:client_id)
       else
@@ -145,8 +145,14 @@ module Admin
         else
           []
         end
-      @coaches = Coach.where(status: "approved").order(:full_name)
-      @packages = CoachPackage.where(is_active: true).includes(:coach).order(:price_piastres)
+      # The pickers offer approved coaches and active packages, plus whatever this code is already
+      # restricted to (a coach since suspended, a package since switched off), so saving the form
+      # never silently drops a restriction and widens the code.
+      coach_ids = [ @code.restrict_coach_id, @code.restrict_coach_id_in_database ].compact
+      package_ids = [ @code.restrict_package_id, @code.restrict_package_id_in_database ].compact
+      @coaches = Coach.where(status: "approved").or(Coach.where(id: coach_ids)).order(:full_name)
+      @packages = CoachPackage.where(is_active: true).or(CoachPackage.where(id: package_ids))
+                              .includes(:coach).order(:price_piastres)
     end
 
     def saved_form_values
