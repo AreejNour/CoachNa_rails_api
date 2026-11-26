@@ -165,4 +165,38 @@ class Admin::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, '<option value="checkout_open"'
     assert_includes @response.body, "Card form opened, not paid"
   end
+  test "the list shows the list price and what was paid" do
+    sign_in
+    sub = make_subscription(client_name: "Promo Pam", coach_name: "Coach A")
+    sub.update!(discount_piastres: 12_345)
+
+    get admin_subscriptions_path
+    assert_includes @response.body, "List price"
+    assert_includes @response.body, "<th class=\"right\">Paid</th>"
+    assert_includes @response.body, "EGP 376.55" # 50000 - 12345
+  end
+
+  def replace!(sub)
+    sub.update!(status: "cancelled")
+    Payment.create!(client_id: sub.client_id, purpose: "subscription", subscription_id: sub.id,
+                    amount_piastres: 50_000, provider: "paymob", status: "failed", failure_reason: "replaced")
+  end
+
+  test "the default list hides replaced checkouts; the cancelled filter shows them" do
+    sign_in
+    replace!(make_subscription(client_name: "Replaced Rita", coach_name: "Coach A"))
+    cancelled = make_subscription(client_name: "Cancelled Carl", coach_name: "Coach B")
+    cancelled.update!(status: "cancelled")
+    # An order payment (no subscription) must not break the NOT IN filter.
+    Payment.create!(client_id: cancelled.client_id, purpose: "order", order_id: SecureRandom.uuid,
+                    amount_piastres: 1_000, provider: "simulated", status: "failed", failure_reason: "replaced")
+
+    get admin_subscriptions_path
+    assert_includes @response.body, "Cancelled Carl"
+    assert_not_includes @response.body, "Replaced Rita"
+
+    get admin_subscriptions_path(status: "cancelled")
+    assert_includes @response.body, "Replaced Rita"
+    assert_includes @response.body, "Cancelled Carl"
+  end
 end

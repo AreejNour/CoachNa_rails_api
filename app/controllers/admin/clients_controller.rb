@@ -13,7 +13,8 @@ module Admin
     end
 
     def show
-      @client = Client.includes(:client_health_profile, subscriptions: [ :coach, :coach_package ]).find(params[:id])
+      @client = Client.includes(:client_health_profile).find(params[:id])
+      @subscriptions = @client.subscriptions.listed.includes(:coach, :coach_package).order(created_at: :desc).to_a
       @profile = @client.client_health_profile
     end
 

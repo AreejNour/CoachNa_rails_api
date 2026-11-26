@@ -45,9 +45,9 @@ module AdminHelper
     label
   end
 
-  # "Dec 01, 2026 – Jan 01, 2027", with "any time" for an open end.
+  # "Dec 01, 2026 00:00 – Jan 01, 2027 00:00" in Cairo time, with "now" / "no end" for an open end.
   def promo_dates(code)
-    fmt = ->(t) { t&.strftime("%b %d, %Y") }
+    fmt = ->(t) { t&.in_time_zone(PromoCode::TIME_ZONE)&.strftime("%b %d, %Y %H:%M") }
     return "Any time" if code.starts_at.nil? && code.ends_at.nil?
 
     "#{fmt.(code.starts_at) || 'now'} – #{fmt.(code.ends_at) || 'no end'}"

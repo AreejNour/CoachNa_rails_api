@@ -22,7 +22,7 @@
     <div class="card-head"><h2>Rules</h2></div>
     <div class="card-body">
       <div class="field"><span class="k">Discount</span><span class="v"><%= promo_discount_label(code) %></span></div>
-      <div class="field"><span class="k">Dates</span><span class="v"><%= promo_dates(code) %></span></div>
+      <div class="field"><span class="k">Dates (Cairo time)</span><span class="v"><%= promo_dates(code) %></span></div>
       <div class="field"><span class="k">Uses (paid) / limit</span><span class="v"><%= @uses %> / <%= code.max_uses || "∞" %></span></div>
       <div class="field"><span class="k">Coach</span><span class="v"><%= code.restrict_coach&.full_name || "Any" %></span></div>
       <div class="field"><span class="k">Package</span><span class="v"><%= code.restrict_package&.name || "Any" %></span></div>
@@ -30,7 +30,7 @@
       <div class="field"><span class="k">Package length (days)</span><span class="v"><%= [ code.min_duration_days || "any", code.max_duration_days || "any" ].join(" – ") %></span></div>
       <div class="field"><span class="k">New patients only</span><span class="v"><%= code.new_patients_only ? "Yes" : "No" %></span></div>
       <div class="field"><span class="k">Created by</span><span class="v"><%= code.created_by_admin&.name || "—" %></span></div>
-      <div class="field"><span class="k">Created</span><span class="v"><%= code.created_at&.strftime("%Y-%m-%d %H:%M") %></span></div>
+      <div class="field"><span class="k">Created</span><span class="v"><%= code.created_at&.in_time_zone(PromoCode::TIME_ZONE)&.strftime("%Y-%m-%d %H:%M") %> (Cairo)</span></div>
     </div>
   </div>
 

@@ -6,6 +6,12 @@ class PromoCode < ApplicationRecord
   MIN_PAYABLE_PIASTRES = 1000
   MIN_FIXED_PIASTRES = 100
   FILTERS = %w[active inactive expired].freeze
+  # Admins type and read promo dates in Egypt's time; the app itself stays on UTC.
+  TIME_ZONE = ActiveSupport::TimeZone["Africa/Cairo"]
+
+  # Never reused or renamed: the API's once-per-patient rule keys on the row, so renaming would let
+  # a patient use the old text again.
+  attr_readonly :code
 
   belongs_to :created_by_admin, class_name: "AdminUser", optional: true
   belongs_to :restrict_coach, class_name: "Coach", optional: true
@@ -13,7 +19,7 @@ class PromoCode < ApplicationRecord
   has_many :promo_code_clients
   has_many :subscriptions
 
-  before_validation { self.code = code.to_s.strip.upcase if code }
+  before_validation(on: :create) { self.code = code.to_s.strip.upcase if code }
 
   validates :code, presence: true, uniqueness: { case_sensitive: false }
   validates :code, format: { with: /\A[A-Z0-9]{3,20}\z/, message: "must be 3-20 letters or digits" }, allow_blank: true
@@ -49,8 +55,13 @@ class PromoCode < ApplicationRecord
                 .group(:promo_code_id).distinct.count(:id)
   end
 
+  # Active packages the API can sell: those of approved coaches.
+  def self.sellable_packages
+    CoachPackage.where(is_active: true).joins(:coach).where(coaches: { status: "approved" })
+  end
+
   def self.max_active_package_price
-    CoachPackage.where(is_active: true).maximum(:price_piastres)
+    sellable_packages.maximum(:price_piastres)
   end
 
   def percent? = kind == "percent"

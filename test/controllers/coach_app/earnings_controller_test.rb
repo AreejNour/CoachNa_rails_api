@@ -104,4 +104,44 @@ class CoachApp::EarningsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "archived plan", item["packageName"]
     assert_equal 18_000, item["netPiastres"]
   end
+  def promo(funded_by)
+    admin = AdminUser.find_by(email: "promo@coachna.app") ||
+            AdminUser.create!(email: "promo@coachna.app", name: "Promo", password: "Secret123")
+    code = PromoCode.create!(code: "CODE#{funded_by.upcase}", kind: "percent", value: 50, funded_by: "platform",
+                             created_by_admin_id: admin.id)
+    code.update_column(:funded_by, funded_by)
+    code
+  end
+
+  test "a CoachNa-funded code looks like a normal sale to the coach" do
+    plain = make_sub(make_client(1, "Nour Hassan"), price: 50_000, commission: 5_000)
+    pay(plain, at: 2.days.ago)
+    # EGP 900 at 20%, 50% CoachNa code: paid 45000, stored commission 18000 - 45000 = -27000.
+    sub = make_sub(make_client(2, "Omar Ali"), price: 90_000, commission: -27_000)
+    sub.update!(promo_code_id: promo("platform").id, discount_piastres: 45_000)
+    pay(sub, amount: 45_000, at: 1.hour.ago)
+
+    get "/coach/earnings", headers: auth
+    item = data["items"].first
+    assert_equal 90_000, item["grossPiastres"]
+    assert_equal 18_000, item["commissionPiastres"]
+    assert_equal 72_000, item["netPiastres"]
+    assert_equal({ "grossPiastres" => 140_000, "commissionPiastres" => 23_000, "netPiastres" => 117_000,
+                   "subscriptionCount" => 2 }, data["summary"])
+  end
+
+  test "a coach-funded code keeps the real numbers" do
+    # EGP 900 at 20%, 50% coach code: paid 45000, commission unchanged 18000.
+    sub = make_sub(make_client(1, "Nour Hassan"), price: 90_000, commission: 18_000)
+    sub.update!(promo_code_id: promo("coach").id, discount_piastres: 45_000)
+    pay(sub, amount: 45_000)
+
+    get "/coach/earnings", headers: auth
+    item = data["items"].first
+    assert_equal 45_000, item["grossPiastres"]
+    assert_equal 18_000, item["commissionPiastres"]
+    assert_equal 27_000, item["netPiastres"]
+    assert_equal({ "grossPiastres" => 45_000, "commissionPiastres" => 18_000, "netPiastres" => 27_000,
+                   "subscriptionCount" => 1 }, data["summary"])
+  end
 end

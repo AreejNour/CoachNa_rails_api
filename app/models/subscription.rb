@@ -8,10 +8,18 @@ class Subscription < ApplicationRecord
   has_many :payments
   has_one :conversation
 
-  # Admin overview (M36): filter by lifecycle status. Blank means "all", which leaves out
-  # `checkout_open` (the card form was opened but nothing was paid); its own filter shows those.
+  # Admin lists' default view: leaves out checkouts nobody paid for, i.e. `checkout_open` (the card
+  # form is open) and replaced checkouts (the Node API closed them with payment failed / `replaced`
+  # when the client subscribed again, e.g. to apply a promo code).
+  scope :listed, lambda {
+    replaced = Payment.where(status: "failed", failure_reason: "replaced").where.not(subscription_id: nil)
+    where.not(status: "checkout_open").where.not(id: replaced.select(:subscription_id))
+  }
+
+  # Admin overview (M36): filter by lifecycle status. Blank means "all", the `listed` view; a
+  # status filter shows every row with that status.
   scope :for_status, lambda { |status|
-    status.present? ? where(status: status) : where.not(status: "checkout_open")
+    status.present? ? where(status: status) : listed
   }
 
   # Admin overview (M36): free-text lookup across the client's name/phone and the coach's name.

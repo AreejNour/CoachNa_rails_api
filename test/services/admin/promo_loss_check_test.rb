@@ -85,6 +85,12 @@ class Admin::PromoLossCheckTest < ActiveSupport::TestCase
     assert_equal 30_000, result[:worst_loss_piastres] # 90000 - 60000
   end
 
+  test "packages of coaches who are not approved are ignored" do
+    @low.update!(status: "suspended")
+
+    assert_equal 0, Admin::PromoLossCheck.call(code)[:affected_count]
+  end
+
   test "inactive packages are ignored" do
     @low_pkg.update!(is_active: false)
 

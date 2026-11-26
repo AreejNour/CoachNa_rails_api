@@ -50,6 +50,19 @@ class PromoCodeTest < ActiveSupport::TestCase
     assert_not build(restrict_package_id: SecureRandom.uuid).valid?
   end
 
+  test "code text cannot change once created" do
+    code = build.tap(&:save!)
+    assert_raises(ActiveRecord::ReadonlyAttributeError) { code.update!(code: "RENAMED") }
+    assert_equal "SUMMER50", code.reload.code
+  end
+
+  test "the fixed upper bound only counts approved coaches' packages" do
+    other = Coach.create!(full_name: "Pending", phone: uniq_phone, password_hash: "h", status: "pending_review")
+    CoachPackage.create!(coach: other, name: "Dear", price_piastres: 500_000, duration_days: 30, includes: {})
+    assert_equal 90_000, PromoCode.max_active_package_price
+    assert_not build(kind: "fixed", value: 89_001).valid?
+  end
+
   test "code is unique ignoring case" do
     build(code: "SUMMER50").save!
     dupe = build(code: "summer50")

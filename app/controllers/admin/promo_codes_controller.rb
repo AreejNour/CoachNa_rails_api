@@ -86,11 +86,11 @@ module Admin
       )
     end
 
-    # The model's attributes from the form. funded_by and the owner are never taken from it.
+    # The model's attributes from the form. funded_by and the owner are never taken from it, and the
+    # code text only on create (it is read-only afterwards).
     def code_attributes
       p = form_params
-      {
-        code: p[:code],
+      attrs = {
         kind: p[:kind],
         value: p[:kind] == "fixed" ? egp_to_piastres(p[:value]) : p[:value].presence,
         max_discount_piastres: egp_to_piastres(p[:max_discount_egp]),
@@ -100,11 +100,17 @@ module Admin
         min_duration_days: p[:min_duration_days].presence,
         max_duration_days: p[:max_duration_days].presence,
         new_patients_only: p[:new_patients_only] == "1",
-        starts_at: p[:starts_at].presence,
-        ends_at: p[:ends_at].presence,
+        starts_at: cairo_time(p[:starts_at]),
+        ends_at: cairo_time(p[:ends_at]),
         max_uses: p[:max_uses].presence,
         active: p[:active] == "1"
       }
+      @code.persisted? ? attrs : attrs.merge(code: p[:code])
+    end
+
+    # A datetime-local value ("2026-12-01T00:00") read as Cairo time. Blank -> nil.
+    def cairo_time(text)
+      text.presence && PromoCode::TIME_ZONE.parse(text)
     end
 
     # "12.5" -> 1250. Blank -> nil. Anything unparseable is passed through so validation rejects it.
@@ -166,7 +172,8 @@ module Admin
         restrict_coach_id: c.restrict_coach_id, restrict_package_id: c.restrict_package_id,
         min_duration_days: c.min_duration_days, max_duration_days: c.max_duration_days,
         new_patients_only: c.new_patients_only ? "1" : "0",
-        starts_at: c.starts_at&.strftime("%Y-%m-%dT%H:%M"), ends_at: c.ends_at&.strftime("%Y-%m-%dT%H:%M"),
+        starts_at: c.starts_at&.in_time_zone(PromoCode::TIME_ZONE)&.strftime("%Y-%m-%dT%H:%M"),
+        ends_at: c.ends_at&.in_time_zone(PromoCode::TIME_ZONE)&.strftime("%Y-%m-%dT%H:%M"),
         max_uses: c.max_uses, active: c.active ? "1" : "0"
       }
     end

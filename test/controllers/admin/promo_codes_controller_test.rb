@@ -131,6 +131,18 @@ class Admin::PromoCodesControllerTest < ActionDispatch::IntegrationTest
     assert code.active
   end
 
+  test "form dates are Cairo time" do
+    sign_in
+    post admin_promo_codes_path, params: form_params(starts_at: "2026-12-01T00:00", ends_at: "2026-12-31T23:59")
+    code = PromoCode.find_by!(code: "SUMMER50")
+    assert_equal Time.utc(2026, 11, 30, 22, 0), code.starts_at
+    assert_equal Time.utc(2026, 12, 31, 21, 59), code.ends_at
+
+    get edit_admin_promo_code_path(code)
+    assert_includes @response.body, 'value="2026-12-01T00:00"'
+    assert_includes @response.body, "(Cairo time)"
+  end
+
   test "create converts EGP money fields to piastres" do
     sign_in
     post admin_promo_codes_path, params: form_params(code: "FLAT", kind: "fixed", value: "100",
@@ -221,16 +233,19 @@ class Admin::PromoCodesControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, "Team Lead"
   end
 
-  test "edit and update change the code" do
+  test "edit and update change the rules but never the code text" do
     sign_in
     code = make_code(value: 10)
     get edit_admin_promo_code_path(code)
     assert_response :ok
     assert_includes @response.body, "SUMMER50"
+    assert_not_includes @response.body, 'name="promo_code[code]"'
 
-    patch admin_promo_code_path(code), params: form_params(value: "15", code: "SUMMER50")
+    patch admin_promo_code_path(code), params: form_params(value: "15", code: "RENAMED")
     assert_redirected_to admin_promo_code_path(code)
-    assert_equal 15, code.reload.value
+    code.reload
+    assert_equal 15, code.value
+    assert_equal "SUMMER50", code.code
     assert_equal @admin.id, code.created_by_admin_id
   end
 

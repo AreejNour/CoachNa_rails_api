@@ -17,9 +17,14 @@
       <div class="card-body" style="padding:16px 18px">
         <div class="form-row">
           <label for="promo_code_code">Code</label>
-          <input type="text" id="promo_code_code" name="promo_code[code]" value="<%= f[:code] %>" maxlength="20"
-                 placeholder="SUMMER50" required style="text-transform:uppercase">
-          <small class="muted">3–20 letters or digits. Never reused once created.</small>
+          <% if @code.persisted? %>
+            <input type="text" id="promo_code_code" value="<%= @code.code_in_database %>" disabled>
+            <small class="muted">The code text can't change once created.</small>
+          <% else %>
+            <input type="text" id="promo_code_code" name="promo_code[code]" value="<%= f[:code] %>" maxlength="20"
+                   placeholder="SUMMER50" required style="text-transform:uppercase">
+            <small class="muted">3–20 letters or digits. Never reused or renamed once created.</small>
+          <% end %>
         </div>
         <div class="form-row">
           <label for="promo_code_kind">Kind</label>
@@ -38,11 +43,11 @@
           <input type="text" id="promo_code_max_discount_egp" name="promo_code[max_discount_egp]" value="<%= f[:max_discount_egp] %>" inputmode="decimal">
         </div>
         <div class="form-row">
-          <label for="promo_code_starts_at">Starts</label>
+          <label for="promo_code_starts_at">Starts (Cairo time)</label>
           <input type="datetime-local" id="promo_code_starts_at" name="promo_code[starts_at]" value="<%= f[:starts_at] %>">
         </div>
         <div class="form-row">
-          <label for="promo_code_ends_at">Ends</label>
+          <label for="promo_code_ends_at">Ends (Cairo time)</label>
           <input type="datetime-local" id="promo_code_ends_at" name="promo_code[ends_at]" value="<%= f[:ends_at] %>">
         </div>
         <div class="form-row">

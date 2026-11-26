@@ -193,4 +193,25 @@ class Admin::ClientsControllerTest < ActionDispatch::IntegrationTest
     get admin_client_path(client)
     assert_match(/onsubmit=.*confirm\(/, @response.body)
   end
+  test "show hides checkout_open and replaced subscriptions" do
+    sign_in
+    client = make_client("Busy Bea", "active", "+201000000351")
+    make = lambda do |coach_name, phone, status|
+      coach = Coach.create!(full_name: coach_name, phone: phone, password_hash: "h", status: "approved")
+      pkg = CoachPackage.create!(coach: coach, name: "Plan", price_piastres: 50_000, duration_days: 30, includes: {})
+      Subscription.create!(client: client, coach: coach, package_id: pkg.id, status: status,
+                           price_piastres: 50_000, commission_percent: 10, commission_piastres: 5_000,
+                           starts_at: Time.current, ends_at: 30.days.from_now)
+    end
+    make.call("Ended Coach", "+201000000352", "ended")
+    replaced = make.call("Replaced Coach", "+201000000353", "cancelled")
+    Payment.create!(client_id: client.id, purpose: "subscription", subscription_id: replaced.id,
+                    amount_piastres: 50_000, provider: "paymob", status: "failed", failure_reason: "replaced")
+    make.call("Open Coach", "+201000000354", "checkout_open")
+
+    get admin_client_path(client)
+    assert_includes @response.body, "Ended Coach"
+    assert_not_includes @response.body, "Replaced Coach"
+    assert_not_includes @response.body, "Open Coach"
+  end
 end
