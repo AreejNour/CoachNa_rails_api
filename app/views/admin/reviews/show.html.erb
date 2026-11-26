@@ -1,42 +1,67 @@
-<p><%= link_to "← Back to moderation queue", admin_reviews_path %></p>
+<div class="crumbs"><%= link_to "Reviews", admin_reviews_path %> › Review #<%= @review.id %></div>
 
-<h1>Review #<%= @review.id %></h1>
+<div class="page-head">
+  <div>
+    <h1>Review #<%= @review.id %></h1>
+    <div class="sub">
+      <span class="stars"><%= "★" * @review.rating.to_i %></span><span class="muted"><%= "★" * (5 - @review.rating.to_i) %></span>
+      · <%= status_pill(@review.status) %>
+    </div>
+  </div>
+</div>
 
-<dl>
-  <dt>Coach</dt><dd><%= @review.coach.full_name %></dd>
-  <dt>Client</dt><dd><%= @review.client.full_name %></dd>
-  <dt>Rating</dt><dd><%= @review.rating %> / 5</dd>
-  <dt>Status</dt><dd><%= @review.status %></dd>
-  <dt>Submitted</dt><dd><%= @review.created_at&.strftime("%Y-%m-%d %H:%M") %></dd>
-</dl>
+<div class="detail">
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Details</h2></div>
+      <div class="card-body">
+        <div class="field"><span class="k">Coach</span><span class="v"><%= @review.coach.full_name %></span></div>
+        <div class="field"><span class="k">Client</span><span class="v"><%= @review.client.full_name %></span></div>
+        <div class="field"><span class="k">Rating</span><span class="v"><%= @review.rating %> / 5</span></div>
+        <div class="field"><span class="k">Submitted</span><span class="v"><%= @review.created_at&.strftime("%Y-%m-%d %H:%M") %></span></div>
+      </div>
+    </div>
 
-<h2>Body</h2>
-<p><%= @review.body.presence || "—" %></p>
+    <div class="card">
+      <div class="card-head"><h2>Body</h2></div>
+      <div class="card-body"><p style="padding:6px 0"><%= @review.body.presence || "—" %></p></div>
+    </div>
 
-<h2>Photos</h2>
-<% if @review.review_photos.empty? %>
-  <p>No photos attached.</p>
-<% else %>
-  <ul>
-    <% @review.review_photos.each do |photo| %>
-      <li>
-        <%= link_to "#{photo.kind} photo", admin_review_photo_path(@review, photo), target: "_blank", rel: "noopener" %>
-        <small>(<%= photo.status %>)</small>
-      </li>
+    <div class="card">
+      <div class="card-head"><h2>Photos</h2></div>
+      <% if @review.review_photos.empty? %>
+        <div class="card-body"><p class="muted" style="padding:10px 0">No photos attached.</p></div>
+      <% else %>
+        <div class="card-body">
+          <ul class="doc-list">
+            <% @review.review_photos.each do |photo| %>
+              <li>
+                <%= link_to "#{photo.kind} photo", admin_review_photo_path(@review, photo), target: "_blank", rel: "noopener" %>
+                <small>(<%= photo.status %>)</small>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Moderation</h2></div>
+    <% if @review.status == "pending" %>
+      <div class="action-form">
+        <%= form_with url: admin_approve_review_path(@review), method: :post do %>
+          <%= submit_tag "Approve" %>
+        <% end %>
+      </div>
+      <div class="action-form">
+        <%= form_with url: admin_reject_review_path(@review), method: :post,
+                      html: { onsubmit: "return confirm('Reject this review? Its photos will be deleted.')" } do %>
+          <%= submit_tag "Reject" %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="card-body"><p class="muted" style="padding:10px 0">Already <%= @review.status %>.</p></div>
     <% end %>
-  </ul>
-<% end %>
-
-<h2>Moderation</h2>
-<% if @review.status == "pending" %>
-  <%= form_with url: admin_approve_review_path(@review), method: :post do %>
-    <%= submit_tag "Approve" %>
-  <% end %>
-
-  <%= form_with url: admin_reject_review_path(@review), method: :post,
-                html: { onsubmit: "return confirm('Reject this review? Its photos will be deleted.')" } do %>
-    <%= submit_tag "Reject" %>
-  <% end %>
-<% else %>
-  <p>Already <%= @review.status %>.</p>
-<% end %>
+  </div>
+</div>

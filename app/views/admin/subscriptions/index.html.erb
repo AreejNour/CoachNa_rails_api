@@ -1,39 +1,56 @@
-<h1>Subscriptions</h1>
+<div class="page-head">
+  <div>
+    <h1>Subscriptions</h1>
+    <div class="sub">Client plans across all coaches</div>
+  </div>
+</div>
 
-<%= form_with url: admin_subscriptions_path, method: :get do %>
-  <input type="text" name="q" value="<%= @q %>" placeholder="Client name, phone, or coach">
-  <select name="status">
-    <option value="">All statuses</option>
-    <% Admin::SubscriptionsController::STATUSES.each do |s| %>
-      <option value="<%= s %>" <%= "selected" if @status == s %>><%= s.humanize %></option>
+<div class="card">
+  <div class="card-head" style="display:block">
+    <%= form_with url: admin_subscriptions_path, method: :get do %>
+      <div class="filters">
+        <div>
+          <label for="q">Search</label>
+          <input type="text" id="q" name="q" value="<%= @q %>" placeholder="Client name, phone, or coach">
+        </div>
+        <div>
+          <label for="status">Status</label>
+          <select name="status" id="status">
+            <option value="">All statuses</option>
+            <% Admin::SubscriptionsController::STATUSES.each do |s| %>
+              <option value="<%= s %>" <%= "selected" if @status == s %>><%= s.humanize %></option>
+            <% end %>
+          </select>
+        </div>
+        <%= submit_tag "Search" %>
+      </div>
     <% end %>
-  </select>
-  <%= submit_tag "Search" %>
-<% end %>
+  </div>
 
-<% if @subscriptions.empty? %>
-  <p>No subscriptions match.</p>
-<% else %>
-  <table>
-    <thead>
-      <tr>
-        <th>Client</th><th>Coach</th><th>Package</th><th>Status</th>
-        <th>Price</th><th>Started</th><th>Ends</th><th>Created</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @subscriptions.each do |sub| %>
+  <% if @subscriptions.empty? %>
+    <div class="card-body"><p class="muted" style="padding:14px 0">No subscriptions match.</p></div>
+  <% else %>
+    <table>
+      <thead>
         <tr>
-          <td><%= link_to sub.client.full_name, admin_subscription_path(sub) %></td>
-          <td><%= sub.coach.full_name %></td>
-          <td><%= sub.coach_package&.name %></td>
-          <td><%= sub.status.humanize %></td>
-          <td><%= number_to_currency(sub.price_piastres / 100.0, unit: "EGP ", precision: 2) %></td>
-          <td><%= sub.starts_at&.strftime("%Y-%m-%d") %></td>
-          <td><%= sub.ends_at&.strftime("%Y-%m-%d") %></td>
-          <td><%= sub.created_at&.strftime("%Y-%m-%d %H:%M") %></td>
+          <th>Client</th><th>Coach</th><th>Package</th><th>Status</th>
+          <th class="right">Price</th><th>Started</th><th>Ends</th><th>Created</th>
         </tr>
-      <% end %>
-    </tbody>
-  </table>
-<% end %>
+      </thead>
+      <tbody>
+        <% @subscriptions.each do |sub| %>
+          <tr>
+            <td><span class="name"><%= link_to sub.client.full_name, admin_subscription_path(sub) %></span></td>
+            <td><%= sub.coach.full_name %></td>
+            <td><%= sub.coach_package&.name %></td>
+            <td><%= status_pill(sub.status) %></td>
+            <td class="right amount"><%= number_to_currency(sub.price_piastres / 100.0, unit: "EGP ", precision: 2) %></td>
+            <td><small><%= sub.starts_at&.strftime("%Y-%m-%d") %></small></td>
+            <td><small><%= sub.ends_at&.strftime("%Y-%m-%d") %></small></td>
+            <td><small><%= sub.created_at&.strftime("%Y-%m-%d %H:%M") %></small></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

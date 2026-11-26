@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoachNa Admin — Redesign Mockup</title>
+<style>
+  :root{
+    --brand:#0F7A63; --brand-dark:#0B5F4D; --brand-tint:#E7F2EE;
+    --bg:#F6F7F8; --card:#fff; --ink:#1A1C1B; --muted:#6B7472;
+    --line:#E6E9E8; --danger:#C5482F; --danger-bg:#FBEDE9;
+    --warn:#9A6B00; --warn-bg:#FBF3DF; --ok:#0F7A63; --ok-bg:#E7F2EE;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  a{color:inherit;text-decoration:none}
+
+  /* shell */
+  .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+  aside{background:var(--brand-dark);color:#fff;display:flex;flex-direction:column;
+        padding:18px 14px;position:sticky;top:0;height:100vh}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;
+         padding:6px 10px 18px}
+  .brand .dot{width:26px;height:26px;border-radius:8px;background:var(--brand);
+       display:grid;place-items:center;font-size:14px}
+  nav.side{display:flex;flex-direction:column;gap:2px;flex:1}
+  nav.side a{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;
+       color:#D8E6E1;font-weight:500}
+  nav.side a .ic{width:18px;text-align:center;opacity:.9}
+  nav.side a:hover{background:rgba(255,255,255,.08);color:#fff}
+  nav.side a.active{background:var(--brand);color:#fff;box-shadow:var(--shadow)}
+  nav.side a .badge{margin-left:auto;background:#fff;color:var(--brand-dark);
+       font-size:11px;font-weight:700;border-radius:20px;padding:1px 7px}
+  .userbox{border-top:1px solid rgba(255,255,255,.14);padding-top:14px;margin-top:10px;
+       display:flex;align-items:center;gap:10px}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);
+       display:grid;place-items:center;font-weight:700;font-size:13px}
+  .userbox .meta{font-size:12px;line-height:1.3;overflow:hidden}
+  .userbox .meta small{color:#A9C3BB}
+  .logout{margin-left:auto;color:#A9C3BB;font-size:18px}
+
+  main{padding:30px 34px}
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+  .page-head h1{margin:0;font-size:22px;letter-spacing:-.01em}
+  .page-head .sub{color:var(--muted);margin-top:4px}
+  .crumbs{color:var(--muted);font-size:12.5px;margin-bottom:6px}
+  .crumbs a{color:var(--brand)}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+        padding:16px 18px;box-shadow:var(--shadow)}
+  .stat .label{color:var(--muted);font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  .stat .num{font-size:26px;font-weight:700;margin-top:6px}
+  .stat .delta{font-size:12px;color:var(--ok);margin-top:2px}
+
+  /* card + table */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+        box-shadow:var(--shadow);overflow:hidden}
+  .card .card-head{display:flex;align-items:center;justify-content:space-between;
+        padding:15px 18px;border-bottom:1px solid var(--line)}
+  .card .card-head h2{margin:0;font-size:15px}
+  .search{border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:13px;
+        min-width:220px;color:var(--ink)}
+  table{width:100%;border-collapse:collapse}
+  th{ text-align:left;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;
+       color:var(--muted);font-weight:600;padding:11px 18px;background:#FAFBFB;border-bottom:1px solid var(--line)}
+  td{padding:14px 18px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#FAFBFB}
+  td .name{font-weight:600}
+  td .name a{color:var(--brand)}
+  td small{color:var(--muted)}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+       padding:3px 10px;border-radius:20px}
+  .pill.ok{background:var(--ok-bg);color:var(--ok)}
+  .pill.warn{background:var(--warn-bg);color:var(--warn)}
+  .pill.danger{background:var(--danger-bg);color:var(--danger)}
+  .pill.muted{background:#EEF1F0;color:var(--muted)}
+
+  .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
+       background:#fff;color:var(--ink);padding:8px 14px;border-radius:9px;font-weight:600;
+       font-size:13px;cursor:pointer}
+  .btn:hover{background:#FAFBFB}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.primary:hover{background:var(--brand-dark)}
+  .btn.danger{color:var(--danger);border-color:#F0CcC3}
+  .amount{font-variant-numeric:tabular-nums;font-weight:600}
+
+  .stars{color:#E4A11B;letter-spacing:1px}
+  .muted{color:var(--muted)}
+  .right{text-align:right}
+
+  /* detail layout */
+  .detail{display:grid;grid-template-columns:1.6fr 1fr;gap:18px}
+  .field{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line)}
+  .field:last-child{border-bottom:none}
+  .field .k{color:var(--muted)}
+  .field .v{font-weight:600}
+  .actions{display:flex;gap:10px;padding:16px 18px;border-top:1px solid var(--line)}
+
+  .pages{display:none}
+  .pages.show{display:block}
+
+  /* login */
+  .login-wrap{min-height:100vh;display:grid;place-items:center;background:
+      radial-gradient(1200px 500px at 70% -10%,var(--brand-tint),var(--bg))}
+  .login-card{background:#fff;border:1px solid var(--line);border-radius:16px;
+      box-shadow:0 10px 30px rgba(16,24,40,.08);width:360px;padding:30px 28px}
+  .login-card .dot{width:40px;height:40px;border-radius:11px;background:var(--brand);
+      display:grid;place-items:center;color:#fff;font-size:20px;margin-bottom:16px}
+  .login-card h1{font-size:20px;margin:0 0 4px}
+  .login-card p{margin:0 0 22px;color:var(--muted)}
+  label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
+  .inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 12px;font-size:14px}
+  .inp:focus{outline:2px solid var(--brand-tint);border-color:var(--brand)}
+  .login-card .btn.primary{width:100%;justify-content:center;margin-top:22px;padding:11px}
+
+  /* view switch toolbar (mockup only) */
+  .mockbar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+    background:#111;color:#fff;border-radius:30px;padding:7px 10px;display:flex;gap:4px;
+    box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:50;font-size:12.5px}
+  .mockbar button{background:transparent;border:0;color:#bbb;padding:6px 13px;border-radius:20px;cursor:pointer;font-weight:600}
+  .mockbar button.active{background:#fff;color:#111}
+</style>
+</head>
+<body>
+
+<!-- ================= APP (sidebar) views ================= -->
+<div class="pages show" id="app">
+<div class="shell">
+  <aside>
+    <div class="brand"><span class="dot">🥗</span> CoachNa <span style="font-weight:500;color:#A9C3BB;font-size:12px">Admin</span></div>
+    <nav class="side">
+      <a class="active" href="#" onclick="go('coaches');return false"><span class="ic">👥</span> Coaches <span class="badge">4</span></a>
+      <a href="#" onclick="go('reviews');return false"><span class="ic">⭐</span> Reviews</a>
+      <a href="#" onclick="go('subs');return false"><span class="ic">📄</span> Subscriptions</a>
+      <a href="#" onclick="go('money');return false"><span class="ic">💰</span> Money</a>
+    </nav>
+    <div class="userbox">
+      <div class="avatar">A</div>
+      <div class="meta">Admin<br><small>admin@coachna.dev</small></div>
+      <a class="logout" href="#" title="Log out">⎋</a>
+    </div>
+  </aside>
+
+  <main>
+    <!-- COACHES INDEX -->
+    <section class="view show" data-view="coaches">
+      <div class="page-head">
+        <div><h1>Coaches</h1><div class="sub">4 waiting for review</div></div>
+        <input class="search" placeholder="Search coaches…">
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Waiting for review</h2>
+          <span class="pill warn">4 pending</span></div>
+        <table>
+          <thead><tr><th>Name</th><th>Phone</th><th>Specialties</th><th>Submitted</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><span class="name"><a href="#" onclick="go('coachShow');return false">Sara Ahmed</a></span></td><td>0551 234 567</td><td>Weight loss, Diabetes</td><td><small>Nov 20, 14:05</small></td><td class="right"><span class="pill warn">Pending</span></td></tr>
+            <tr><td><span class="name">Omar Khalid</span></td><td>0533 998 221</td><td>Sports nutrition</td><td><small>Nov 19, 09:40</small></td><td class="right"><span class="pill warn">Pending</span></td></tr>
+            <tr><td><span class="name">Lina Yousef</span></td><td>0567 445 118</td><td>PCOS, Weight loss</td><td><small>Nov 18, 18:22</small></td><td class="right"><span class="pill warn">Pending</span></td></tr>
+            <tr><td><span class="name">Tariq Noor</span></td><td>0590 771 034</td><td>Muscle gain</td><td><small>Nov 18, 11:10</small></td><td class="right"><span class="pill warn">Pending</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- COACH SHOW -->
+    <section class="view" data-view="coachShow">
+      <div class="crumbs"><a href="#" onclick="go('coaches');return false">Coaches</a> › Sara Ahmed</div>
+      <div class="page-head">
+        <div><h1>Sara Ahmed</h1><div class="sub">Submitted Nov 20, 2026 · <span class="pill warn">Pending review</span></div></div>
+      </div>
+      <div class="detail">
+        <div class="card">
+          <div class="card-head"><h2>Application</h2></div>
+          <div style="padding:6px 18px">
+            <div class="field"><span class="k">Full name</span><span class="v">Sara Ahmed</span></div>
+            <div class="field"><span class="k">Phone</span><span class="v">0551 234 567</span></div>
+            <div class="field"><span class="k">Specialties</span><span class="v">Weight loss, Diabetes</span></div>
+            <div class="field"><span class="k">Experience</span><span class="v">6 years</span></div>
+            <div class="field"><span class="k">Certification</span><span class="v"><a style="color:var(--brand)" href="#">licence.pdf</a></span></div>
+            <div class="field"><span class="k">Bio</span><span class="v" style="max-width:260px;text-align:right;font-weight:400">Registered dietitian focused on sustainable weight loss and metabolic health.</span></div>
+          </div>
+          <div class="actions">
+            <button class="btn primary">✓ Approve coach</button>
+            <button class="btn danger">✕ Reject</button>
+          </div>
+        </div>
+        <div class="card" style="align-self:start">
+          <div class="card-head"><h2>Summary</h2></div>
+          <div style="padding:6px 18px 12px">
+            <div class="field"><span class="k">Status</span><span class="v"><span class="pill warn">Pending</span></span></div>
+            <div class="field"><span class="k">Account created</span><span class="v">Nov 15</span></div>
+            <div class="field"><span class="k">Restaurants linked</span><span class="v">0</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REVIEWS -->
+    <section class="view" data-view="reviews">
+      <div class="page-head"><div><h1>Reviews</h1><div class="sub">Client ratings of coaches</div></div>
+        <input class="search" placeholder="Search…"></div>
+      <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat"><div class="label">Avg rating</div><div class="num">4.6</div><div class="delta">▲ 0.2 vs last month</div></div>
+        <div class="stat"><div class="label">Total reviews</div><div class="num">312</div></div>
+        <div class="stat"><div class="label">Flagged</div><div class="num">2</div><div class="delta" style="color:var(--danger)">needs attention</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Recent reviews</h2></div>
+        <table>
+          <thead><tr><th>Coach</th><th>Client</th><th>Rating</th><th>Comment</th><th>Date</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Sara Ahmed</td><td>Mona S.</td><td><span class="stars">★★★★★</span></td><td><small>“Lost 6kg, great plans.”</small></td><td><small>Nov 24</small></td></tr>
+            <tr><td class="name">Omar Khalid</td><td>Yazan R.</td><td><span class="stars">★★★★</span><span class="muted">★</span></td><td><small>“Very responsive.”</small></td><td><small>Nov 23</small></td></tr>
+            <tr><td class="name">Lina Yousef</td><td>Dana F.</td><td><span class="stars">★★</span><span class="muted">★★★</span></td><td><small>“Plan felt generic.”</small> <span class="pill danger">Flagged</span></td><td><small>Nov 22</small></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SUBSCRIPTIONS -->
+    <section class="view" data-view="subs">
+      <div class="page-head"><div><h1>Subscriptions</h1><div class="sub">Active client plans</div></div>
+        <input class="search" placeholder="Search…"></div>
+      <div class="stats">
+        <div class="stat"><div class="label">Active</div><div class="num">248</div><div class="delta">▲ 12 this week</div></div>
+        <div class="stat"><div class="label">Trialing</div><div class="num">31</div></div>
+        <div class="stat"><div class="label">Past due</div><div class="num">7</div><div class="delta" style="color:var(--danger)">follow up</div></div>
+        <div class="stat"><div class="label">Canceled (30d)</div><div class="num">14</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>All subscriptions</h2>
+          <span class="pill muted">286 total</span></div>
+        <table>
+          <thead><tr><th>Client</th><th>Coach</th><th>Plan</th><th>Status</th><th class="right">Renews</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Mona Saleh</td><td>Sara Ahmed</td><td>Monthly · Weight loss</td><td><span class="pill ok">Active</span></td><td class="right"><small>Dec 20</small></td></tr>
+            <tr><td class="name">Yazan Radwan</td><td>Omar Khalid</td><td>Quarterly · Sports</td><td><span class="pill ok">Active</span></td><td class="right"><small>Jan 02</small></td></tr>
+            <tr><td class="name">Dana Fares</td><td>Lina Yousef</td><td>Monthly · PCOS</td><td><span class="pill warn">Trialing</span></td><td class="right"><small>Nov 30</small></td></tr>
+            <tr><td class="name">Hadi Noor</td><td>Tariq Noor</td><td>Monthly · Muscle gain</td><td><span class="pill danger">Past due</span></td><td class="right"><small>Nov 26</small></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MONEY -->
+    <section class="view" data-view="money">
+      <div class="page-head"><div><h1>Money</h1><div class="sub">Revenue & partner commissions</div></div>
+        <button class="btn">⇩ Export CSV</button></div>
+      <div class="stats">
+        <div class="stat"><div class="label">Revenue (MTD)</div><div class="num">SAR 48,250</div><div class="delta">▲ 8% vs last month</div></div>
+        <div class="stat"><div class="label">Coach payouts</div><div class="num">SAR 19,300</div></div>
+        <div class="stat"><div class="label">Restaurant share</div><div class="num">SAR 12,100</div></div>
+        <div class="stat"><div class="label">Platform net</div><div class="num">SAR 16,850</div><div class="delta">▲ 11%</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Recent transactions</h2></div>
+        <table>
+          <thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Partner</th><th class="right">Amount</th></tr></thead>
+          <tbody>
+            <tr><td><small>Nov 25</small></td><td>Mona Saleh</td><td>Subscription</td><td>Coach · Sara Ahmed</td><td class="right amount">SAR 199.00</td></tr>
+            <tr><td><small>Nov 25</small></td><td>Yazan Radwan</td><td>Meal order</td><td>Rest. · Green Bowl</td><td class="right amount">SAR 64.50</td></tr>
+            <tr><td><small>Nov 24</small></td><td>Dana Fares</td><td>Commission</td><td>Coach · Lina Yousef</td><td class="right amount" style="color:var(--danger)">−SAR 40.00</td></tr>
+            <tr><td><small>Nov 24</small></td><td>Hadi Noor</td><td>Subscription</td><td>Coach · Tariq Noor</td><td class="right amount">SAR 199.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+</div>
+
+<!-- ================= LOGIN view ================= -->
+<div class="pages" id="login">
+  <div class="login-wrap">
+    <form class="login-card" onsubmit="return false">
+      <div class="dot">🥗</div>
+      <h1>CoachNa Admin</h1>
+      <p>Sign in to manage coaches, reviews & payouts.</p>
+      <label>Email</label>
+      <input class="inp" value="admin@coachna.dev">
+      <label>Password</label>
+      <input class="inp" type="password" value="password123">
+      <button class="btn primary">Sign in</button>
+    </form>
+  </div>
+</div>
+
+<div class="mockbar">
+  <button class="active" onclick="show('app',this)">Dashboard</button>
+  <button onclick="show('login',this)">Login page</button>
+</div>
+
+<script>
+  function go(view){
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('show',v.dataset.view===view));
+    var map={coaches:'coaches',coachShow:'coaches',reviews:'reviews',subs:'subs',money:'money'};
+    document.querySelectorAll('nav.side a').forEach(a=>a.classList.remove('active'));
+    var idx={coaches:0,reviews:1,subs:2,money:3}[map[view]];
+    document.querySelectorAll('nav.side a')[idx].classList.add('active');
+    window.scrollTo(0,0);
+  }
+  function show(id,btn){
+    document.querySelectorAll('.pages').forEach(p=>p.classList.remove('show'));
+    document.getElementById(id).classList.add('show');
+    document.querySelectorAll('.mockbar button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<div class="crumbs"><%= link_to "Clients", admin_clients_path %> › <%= @client.full_name %></div>
+
+<div class="page-head">
+  <div>
+    <h1><%= @client.full_name %></h1>
+    <div class="sub">
+      <%= status_pill(@client.status) %>
+      · joined <%= @client.created_at.strftime("%b %d, %Y") %>
+    </div>
+  </div>
+</div>
+
+<div class="detail">
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Account</h2></div>
+      <div class="card-body">
+        <div class="field"><span class="k">Phone</span><span class="v"><%= @client.phone %> <% if @client.phone_verified_at %><span class="pill ok">verified</span><% end %></span></div>
+        <div class="field"><span class="k">Email</span><span class="v"><%= @client.email.presence || "—" %> <% if @client.email_verified_at %><span class="pill ok">verified</span><% end %></span></div>
+        <div class="field"><span class="k">Joined</span><span class="v"><%= @client.created_at.strftime("%Y-%m-%d %H:%M") %></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Health profile</h2></div>
+      <% if @profile.nil? %>
+        <div class="card-body"><p class="muted" style="padding:10px 0">No health profile yet.</p></div>
+      <% else %>
+        <div class="card-body">
+          <div class="field"><span class="k">Age</span><span class="v"><%= age_from(@profile.date_of_birth) || "—" %></span></div>
+          <div class="field"><span class="k">Gender</span><span class="v"><%= @profile.gender.presence || "—" %></span></div>
+          <div class="field"><span class="k">Height</span><span class="v"><%= @profile.height_cm ? "#{@profile.height_cm} cm" : "—" %></span></div>
+          <div class="field"><span class="k">Weight</span><span class="v"><%= @profile.weight_kg ? "#{@profile.weight_kg} kg" : "—" %></span></div>
+          <div class="field"><span class="k">Goal</span><span class="v"><%= @profile.goal.presence || "—" %></span></div>
+          <div class="field"><span class="k">Target weight</span><span class="v"><%= @profile.target_weight_kg ? "#{@profile.target_weight_kg} kg" : "—" %></span></div>
+          <div class="field"><span class="k">Activity level</span><span class="v"><%= @profile.activity_level.presence || "—" %></span></div>
+          <div class="field"><span class="k">Allergies</span><span class="v"><%= Array(@profile.allergies).join(", ").presence || "—" %></span></div>
+          <div class="field"><span class="k">Avoided foods</span><span class="v"><%= Array(@profile.avoided_foods).join(", ").presence || "—" %></span></div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Subscriptions</h2></div>
+      <% if @client.subscriptions.empty? %>
+        <div class="card-body"><p class="muted" style="padding:10px 0">No subscriptions.</p></div>
+      <% else %>
+        <table>
+          <thead>
+            <tr><th>Status</th><th>Coach</th><th>Package</th><th>Started</th><th>Ends</th></tr>
+          </thead>
+          <tbody>
+            <% @client.subscriptions.sort_by { |s| s.created_at || Time.at(0) }.reverse.each do |sub| %>
+              <tr>
+                <td><%= link_to status_pill(sub.status), admin_subscription_path(sub) %></td>
+                <td><%= sub.coach&.full_name %></td>
+                <td><%= sub.coach_package&.name || "—" %></td>
+                <td><small><%= sub.starts_at&.strftime("%b %d, %Y") || "—" %></small></td>
+                <td><small><%= sub.ends_at&.strftime("%b %d, %Y") || "—" %></small></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Admin actions</h2></div>
+    <%= render "actions" %>
+  </div>
+</div>

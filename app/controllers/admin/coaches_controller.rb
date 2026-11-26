@@ -1,8 +1,22 @@
 module Admin
   class CoachesController < BaseController
-    # The review list: coaches waiting for approval, newest submission first.
+    STATUSES = %w[incomplete pending_review approved rejected suspended deactivated].freeze
+
+    # The coaches list: every coach, optionally filtered by status and a name/phone/email
+    # search. Defaults to showing those waiting for review first, newest submission first.
     def index
-      @coaches = Coach.where(status: "pending_review").order(profile_submitted_at: :desc)
+      @status = params[:status].presence_in(STATUSES)
+      @query  = params[:q].to_s.strip
+
+      scope = Coach.all
+      scope = scope.where(status: @status) if @status
+      if @query.present?
+        like = "%#{@query}%"
+        scope = scope.where("full_name ILIKE :q OR phone ILIKE :q OR email ILIKE :q", q: like)
+      end
+
+      @counts  = Coach.group(:status).count
+      @coaches = scope.order(Arel.sql("profile_submitted_at DESC NULLS LAST, created_at DESC"))
     end
 
     def show

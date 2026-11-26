@@ -14,7 +14,7 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
                   specialties: [ "weight_loss" ], profile_submitted_at: submitted)
   end
 
-  test "index lists pending_review coaches and excludes other statuses" do
+  test "index lists coaches of every status by default" do
     sign_in
     make_coach("Pending Pat", "pending_review", "+201000000001")
     make_coach("Approved Amy", "approved", "+201000000002")
@@ -23,11 +23,33 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     get "/admin"
     assert_response :ok
     assert_includes @response.body, "Pending Pat"
-    assert_not_includes @response.body, "Approved Amy"
-    assert_not_includes @response.body, "Incomplete Ian"
+    assert_includes @response.body, "Approved Amy"
+    assert_includes @response.body, "Incomplete Ian"
   end
 
-  test "index shows an empty state when none are pending" do
+  test "index filters by status param" do
+    sign_in
+    make_coach("Pending Pat", "pending_review", "+201000000001")
+    make_coach("Approved Amy", "approved", "+201000000002")
+
+    get "/admin", params: { status: "approved" }
+    assert_response :ok
+    assert_includes @response.body, "Approved Amy"
+    assert_not_includes @response.body, "Pending Pat"
+  end
+
+  test "index filters by search query across name and phone" do
+    sign_in
+    make_coach("Pending Pat", "pending_review", "+201000000001")
+    make_coach("Approved Amy", "approved", "+201000000002")
+
+    get "/admin", params: { q: "Amy" }
+    assert_response :ok
+    assert_includes @response.body, "Approved Amy"
+    assert_not_includes @response.body, "Pending Pat"
+  end
+
+  test "index shows an empty state when there are no coaches" do
     sign_in
     get "/admin"
     assert_response :ok
@@ -218,7 +240,8 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_includes @response.body, "Suspend"
     assert_includes @response.body, "Deactivate"
-    assert_not_includes @response.body, "Approve"
+    # No Approve action form (the "Approved" status pill also contains "Approve", so match the URL).
+    assert_not_includes @response.body, admin_approve_coach_path(coach)
     assert_not_includes @response.body, "Reactivate"
   end
 

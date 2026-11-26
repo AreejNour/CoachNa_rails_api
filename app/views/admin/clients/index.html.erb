@@ -1,0 +1,46 @@
+<div class="page-head">
+  <div>
+    <h1>Clients</h1>
+    <div class="sub"><%= pluralize(@clients.size, "client") %><%= " · #{@status.humanize}" if @status %></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head" style="flex-wrap:wrap;gap:10px">
+    <div class="filters">
+      <%= link_to "All", admin_clients_path(q: @query.presence), class: "pill #{'active' unless @status}" %>
+      <% Admin::ClientsController::STATUSES.each do |status| %>
+        <%= link_to admin_clients_path(status: status, q: @query.presence), class: "pill #{'active' if @status == status}" do %>
+          <%= status.humanize %><% if @counts[status].to_i > 0 %> <span class="count"><%= @counts[status] %></span><% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%= form_with url: admin_clients_path, method: :get, class: "search-form" do |f| %>
+      <%= hidden_field_tag :status, @status if @status %>
+      <%= f.search_field :q, value: @query, placeholder: "Search name, phone, email" %>
+      <%= f.submit "Search" %>
+    <% end %>
+  </div>
+
+  <% if @clients.empty? %>
+    <div class="card-body"><p class="muted" style="padding:14px 0">No clients match this view.</p></div>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Status</th><th>Phone</th><th>Email</th><th>Joined</th></tr>
+      </thead>
+      <tbody>
+        <% @clients.each do |client| %>
+          <tr>
+            <td><span class="name"><%= link_to client.full_name, admin_client_path(client) %></span></td>
+            <td><%= status_pill(client.status) %></td>
+            <td><%= client.phone %></td>
+            <td><%= client.email.presence || "—" %></td>
+            <td><small><%= client.created_at&.strftime("%b %d, %Y") %></small></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

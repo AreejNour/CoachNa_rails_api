@@ -76,6 +76,11 @@ Rails.application.routes.draw do
     post "reviews/:id/reject", to: "reviews#reject", as: :reject_review
     get "subscriptions", to: "subscriptions#index", as: :subscriptions
     get "subscriptions/:id", to: "subscriptions#show", as: :subscription
+    get "clients", to: "clients#index", as: :clients
+    get "clients/:id", to: "clients#show", as: :client
+    post "clients/:id/suspend", to: "clients#suspend", as: :suspend_client
+    post "clients/:id/reactivate", to: "clients#reactivate", as: :reactivate_client
+    post "clients/:id/deactivate", to: "clients#deactivate", as: :deactivate_client
     get "money", to: "money#index", as: :money
   end
 

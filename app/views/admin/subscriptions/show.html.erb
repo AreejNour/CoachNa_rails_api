@@ -1,63 +1,86 @@
 <% sub = @subscription %>
-<p><%= link_to "← Subscriptions", admin_subscriptions_path %></p>
+<div class="crumbs"><%= link_to "Subscriptions", admin_subscriptions_path %> › <%= sub.client.full_name %></div>
 
-<h1>Subscription</h1>
-<table>
-  <tr><th>Status</th><td><%= sub.status.humanize %></td></tr>
-  <tr><th>Price</th><td><%= number_to_currency(sub.price_piastres / 100.0, unit: "EGP ", precision: 2) %></td></tr>
-  <tr><th>Commission</th><td><%= sub.commission_percent %>% (<%= number_to_currency(sub.commission_piastres / 100.0, unit: "EGP ", precision: 2) %>)</td></tr>
-  <tr><th>Starts</th><td><%= sub.starts_at&.strftime("%Y-%m-%d %H:%M") %></td></tr>
-  <tr><th>Ends</th><td><%= sub.ends_at&.strftime("%Y-%m-%d %H:%M") %></td></tr>
-  <tr><th>Questionnaire submitted</th><td><%= sub.questionnaire_submitted_at&.strftime("%Y-%m-%d %H:%M") || "—" %></td></tr>
-  <tr><th>Created</th><td><%= sub.created_at&.strftime("%Y-%m-%d %H:%M") %></td></tr>
-</table>
+<div class="page-head">
+  <div>
+    <h1>Subscription</h1>
+    <div class="sub"><%= status_pill(sub.status) %> · <%= sub.client.full_name %></div>
+  </div>
+</div>
 
-<h2>Client</h2>
-<table>
-  <tr><th>Name</th><td><%= sub.client.full_name %></td></tr>
-  <tr><th>Phone</th><td><%= sub.client.phone %></td></tr>
-  <% if sub.client.email.present? %>
-    <tr><th>Email</th><td><%= sub.client.email %></td></tr>
-  <% end %>
-</table>
+<div class="detail">
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Overview</h2></div>
+      <div class="card-body">
+        <div class="field"><span class="k">Status</span><span class="v"><%= status_pill(sub.status) %></span></div>
+        <div class="field"><span class="k">Price</span><span class="v"><%= number_to_currency(sub.price_piastres / 100.0, unit: "EGP ", precision: 2) %></span></div>
+        <div class="field"><span class="k">Commission</span><span class="v"><%= sub.commission_percent %>% (<%= number_to_currency(sub.commission_piastres / 100.0, unit: "EGP ", precision: 2) %>)</span></div>
+        <div class="field"><span class="k">Starts</span><span class="v"><%= sub.starts_at&.strftime("%Y-%m-%d %H:%M") %></span></div>
+        <div class="field"><span class="k">Ends</span><span class="v"><%= sub.ends_at&.strftime("%Y-%m-%d %H:%M") %></span></div>
+        <div class="field"><span class="k">Questionnaire submitted</span><span class="v"><%= sub.questionnaire_submitted_at&.strftime("%Y-%m-%d %H:%M") || "—" %></span></div>
+        <div class="field"><span class="k">Created</span><span class="v"><%= sub.created_at&.strftime("%Y-%m-%d %H:%M") %></span></div>
+      </div>
+    </div>
 
-<h2>Coach</h2>
-<table>
-  <tr><th>Name</th><td><%= sub.coach.full_name %></td></tr>
-  <tr><th>Phone</th><td><%= sub.coach.phone %></td></tr>
-</table>
-
-<h2>Package</h2>
-<% if sub.coach_package %>
-  <table>
-    <tr><th>Name</th><td><%= sub.coach_package.name %></td></tr>
-    <tr><th>Duration</th><td><%= sub.coach_package.duration_days %> days</td></tr>
-    <tr><th>Price</th><td><%= number_to_currency(sub.coach_package.price_piastres / 100.0, unit: "EGP ", precision: 2) %></td></tr>
-  </table>
-<% else %>
-  <p>Package not found.</p>
-<% end %>
-
-<h2>Payments</h2>
-<% if sub.payments.empty? %>
-  <p>No payments recorded.</p>
-<% else %>
-  <table>
-    <thead>
-      <tr><th>Amount</th><th>Status</th><th>Provider</th><th>Method</th><th>Reference</th><th>Paid at</th><th>Failure</th></tr>
-    </thead>
-    <tbody>
-      <% sub.payments.order(created_at: :desc).each do |p| %>
-        <tr>
-          <td><%= number_to_currency(p.amount_piastres / 100.0, unit: "EGP ", precision: 2) %></td>
-          <td><%= p.status.humanize %></td>
-          <td><%= p.provider %></td>
-          <td><%= p[:method] || "—" %></td>
-          <td><%= p.provider_ref || "—" %></td>
-          <td><%= p.paid_at&.strftime("%Y-%m-%d %H:%M") || "—" %></td>
-          <td><%= p.failure_reason || "—" %></td>
-        </tr>
+    <div class="card">
+      <div class="card-head"><h2>Payments</h2></div>
+      <% if sub.payments.empty? %>
+        <div class="card-body"><p class="muted" style="padding:10px 0">No payments recorded.</p></div>
+      <% else %>
+        <table>
+          <thead>
+            <tr><th class="right">Amount</th><th>Status</th><th>Provider</th><th>Method</th><th>Reference</th><th>Paid at</th><th>Failure</th></tr>
+          </thead>
+          <tbody>
+            <% sub.payments.order(created_at: :desc).each do |p| %>
+              <tr>
+                <td class="right amount"><%= number_to_currency(p.amount_piastres / 100.0, unit: "EGP ", precision: 2) %></td>
+                <td><%= status_pill(p.status) %></td>
+                <td><%= p.provider %></td>
+                <td><%= p[:method] || "—" %></td>
+                <td><small><%= p.provider_ref || "—" %></small></td>
+                <td><small><%= p.paid_at&.strftime("%Y-%m-%d %H:%M") || "—" %></small></td>
+                <td><small><%= p.failure_reason || "—" %></small></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
       <% end %>
-    </tbody>
-  </table>
-<% end %>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Client</h2></div>
+      <div class="card-body">
+        <div class="field"><span class="k">Name</span><span class="v"><%= sub.client.full_name %></span></div>
+        <div class="field"><span class="k">Phone</span><span class="v"><%= sub.client.phone %></span></div>
+        <% if sub.client.email.present? %>
+          <div class="field"><span class="k">Email</span><span class="v"><%= sub.client.email %></span></div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Coach</h2></div>
+      <div class="card-body">
+        <div class="field"><span class="k">Name</span><span class="v"><%= sub.coach.full_name %></span></div>
+        <div class="field"><span class="k">Phone</span><span class="v"><%= sub.coach.phone %></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Package</h2></div>
+      <% if sub.coach_package %>
+        <div class="card-body">
+          <div class="field"><span class="k">Name</span><span class="v"><%= sub.coach_package.name %></span></div>
+          <div class="field"><span class="k">Duration</span><span class="v"><%= sub.coach_package.duration_days %> days</span></div>
+          <div class="field"><span class="k">Price</span><span class="v"><%= number_to_currency(sub.coach_package.price_piastres / 100.0, unit: "EGP ", precision: 2) %></span></div>
+        </div>
+      <% else %>
+        <div class="card-body"><p class="muted" style="padding:10px 0">Package not found.</p></div>
+      <% end %>
+    </div>
+  </div>
+</div>

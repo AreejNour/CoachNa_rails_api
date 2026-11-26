@@ -3,6 +3,7 @@ module Admin
   # Intentionally NOT ApplicationController (that is ActionController::API, JSON-only).
   class BaseController < ActionController::Base
     layout "admin"
+    helper ::AdminHelper
     protect_from_forgery with: :exception
     before_action :require_admin
 

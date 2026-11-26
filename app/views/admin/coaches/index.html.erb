@@ -1,21 +1,46 @@
-<h1>Coaches waiting for review</h1>
+<div class="page-head">
+  <div>
+    <h1>Coaches</h1>
+    <div class="sub"><%= pluralize(@coaches.size, "coach").sub("coachs", "coaches") %><%= " · #{@status.humanize}" if @status %></div>
+  </div>
+</div>
 
-<% if @coaches.empty? %>
-  <p>No coaches are waiting for review.</p>
-<% else %>
-  <table>
-    <thead>
-      <tr><th>Name</th><th>Phone</th><th>Specialties</th><th>Submitted</th></tr>
-    </thead>
-    <tbody>
-      <% @coaches.each do |coach| %>
-        <tr>
-          <td><%= link_to coach.full_name, admin_coach_path(coach) %></td>
-          <td><%= coach.phone %></td>
-          <td><%= Array(coach.specialties).join(", ") %></td>
-          <td><%= coach.profile_submitted_at&.strftime("%Y-%m-%d %H:%M") %></td>
-        </tr>
+<div class="card">
+  <div class="card-head" style="flex-wrap:wrap;gap:10px">
+    <div class="filters">
+      <%= link_to "All", admin_root_path(q: @query.presence), class: "pill #{'active' unless @status}" %>
+      <% Admin::CoachesController::STATUSES.each do |status| %>
+        <%= link_to admin_root_path(status: status, q: @query.presence), class: "pill #{'active' if @status == status}" do %>
+          <%= status.humanize %><% if @counts[status].to_i > 0 %> <span class="count"><%= @counts[status] %></span><% end %>
+        <% end %>
       <% end %>
-    </tbody>
-  </table>
-<% end %>
+    </div>
+
+    <%= form_with url: admin_root_path, method: :get, class: "search-form" do |f| %>
+      <%= hidden_field_tag :status, @status if @status %>
+      <%= f.search_field :q, value: @query, placeholder: "Search name, phone, email" %>
+      <%= f.submit "Search" %>
+    <% end %>
+  </div>
+
+  <% if @coaches.empty? %>
+    <div class="card-body"><p class="muted" style="padding:14px 0">No coaches match this view.</p></div>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Status</th><th>Phone</th><th>Specialties</th><th>Submitted</th></tr>
+      </thead>
+      <tbody>
+        <% @coaches.each do |coach| %>
+          <tr>
+            <td><span class="name"><%= link_to coach.full_name, admin_coach_path(coach) %></span></td>
+            <td><%= status_pill(coach.status) %></td>
+            <td><%= coach.phone %></td>
+            <td><%= Array(coach.specialties).join(", ") %></td>
+            <td><small><%= coach.profile_submitted_at&.strftime("%b %d, %Y · %H:%M") || "—" %></small></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>
