@@ -1,0 +1,135 @@
+<% f = @form %>
+<% if @code.errors.any? %>
+  <div class="flash alert" role="alert">
+    <strong>Couldn't save:</strong>
+    <ul style="margin:6px 0 0;padding-left:18px">
+      <% @code.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+    </ul>
+  </div>
+<% end %>
+
+<%= render "loss_warning", loss: @loss %>
+
+<%= form_with url: url, method: method, scope: :promo_code do %>
+  <div class="detail">
+    <div class="card">
+      <div class="card-head"><h2>Code</h2></div>
+      <div class="card-body" style="padding:16px 18px">
+        <div class="form-row">
+          <label for="promo_code_code">Code</label>
+          <% if @code.persisted? %>
+            <input type="text" id="promo_code_code" value="<%= @code.code_in_database %>" disabled>
+            <small class="muted">The code text can't change once created.</small>
+          <% else %>
+            <input type="text" id="promo_code_code" name="promo_code[code]" value="<%= f[:code] %>" maxlength="20"
+                   placeholder="SUMMER50" required style="text-transform:uppercase">
+            <small class="muted">3–20 letters or digits. Never reused or renamed once created.</small>
+          <% end %>
+        </div>
+        <div class="form-row">
+          <label for="promo_code_kind">Kind</label>
+          <select id="promo_code_kind" name="promo_code[kind]">
+            <option value="percent" <%= "selected" if f[:kind] == "percent" %>>Percent off</option>
+            <option value="fixed" <%= "selected" if f[:kind] == "fixed" %>>Fixed amount off (EGP)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="promo_code_value">Value</label>
+          <input type="text" id="promo_code_value" name="promo_code[value]" value="<%= f[:value] %>" required inputmode="decimal">
+          <small class="muted">Percent: a whole number 1–99. Fixed: EGP, at least 1, leaving at least EGP 10 on the dearest active package.</small>
+        </div>
+        <div class="form-row">
+          <label for="promo_code_max_discount_egp">Discount cap (EGP, percent codes only)</label>
+          <input type="text" id="promo_code_max_discount_egp" name="promo_code[max_discount_egp]" value="<%= f[:max_discount_egp] %>" inputmode="decimal">
+        </div>
+        <div class="form-row">
+          <label for="promo_code_starts_at">Starts (Cairo time)</label>
+          <input type="datetime-local" id="promo_code_starts_at" name="promo_code[starts_at]" value="<%= f[:starts_at] %>">
+        </div>
+        <div class="form-row">
+          <label for="promo_code_ends_at">Ends (Cairo time)</label>
+          <input type="datetime-local" id="promo_code_ends_at" name="promo_code[ends_at]" value="<%= f[:ends_at] %>">
+        </div>
+        <div class="form-row">
+          <label for="promo_code_max_uses">Total paid uses limit</label>
+          <input type="number" id="promo_code_max_uses" name="promo_code[max_uses]" value="<%= f[:max_uses] %>" min="1" step="1">
+        </div>
+        <div class="form-row">
+          <input type="hidden" name="promo_code[active]" value="0">
+          <label><input type="checkbox" name="promo_code[active]" value="1" <%= "checked" if f[:active] == "1" || f[:active] == true %>> Active</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Who and what it applies to</h2></div>
+      <div class="card-body" style="padding:16px 18px">
+        <div class="form-row">
+          <label for="promo_code_restrict_coach_id">Coach</label>
+          <select id="promo_code_restrict_coach_id" name="promo_code[restrict_coach_id]">
+            <option value="">Any coach</option>
+            <% @coaches.each do |coach| %>
+              <option value="<%= coach.id %>" <%= "selected" if f[:restrict_coach_id].to_s == coach.id %>><%= coach.full_name %><%= " (#{coach.status.humanize.downcase})" unless coach.status == "approved" %></option>
+            <% end %>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="promo_code_restrict_package_id">Package</label>
+          <select id="promo_code_restrict_package_id" name="promo_code[restrict_package_id]">
+            <option value="">Any package</option>
+            <% @packages.each do |pkg| %>
+              <option value="<%= pkg.id %>" <%= "selected" if f[:restrict_package_id].to_s == pkg.id %>>
+                <%= pkg.coach.full_name %> — <%= pkg.name %> (<%= egp(pkg.price_piastres) %>, <%= pkg.duration_days %> days)<%= " (inactive)" unless pkg.is_active %>
+              </option>
+            <% end %>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="promo_code_min_price_egp">Minimum package price (EGP)</label>
+          <input type="text" id="promo_code_min_price_egp" name="promo_code[min_price_egp]" value="<%= f[:min_price_egp] %>" inputmode="decimal">
+        </div>
+        <div class="form-row" style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label for="promo_code_min_duration_days">Min length (days)</label>
+            <input type="number" id="promo_code_min_duration_days" name="promo_code[min_duration_days]" value="<%= f[:min_duration_days] %>" min="1" step="1">
+          </div>
+          <div style="flex:1">
+            <label for="promo_code_max_duration_days">Max length (days)</label>
+            <input type="number" id="promo_code_max_duration_days" name="promo_code[max_duration_days]" value="<%= f[:max_duration_days] %>" min="1" step="1">
+          </div>
+        </div>
+        <div class="form-row">
+          <input type="hidden" name="promo_code[new_patients_only]" value="0">
+          <label><input type="checkbox" name="promo_code[new_patients_only]" value="1" <%= "checked" if f[:new_patients_only] == "1" %>> New patients only (no paid subscription yet)</label>
+        </div>
+
+        <div class="form-row">
+          <label>Specific patients</label>
+          <small class="muted">Empty means anyone. Otherwise only the ticked accounts can use the code.</small>
+          <input type="hidden" name="promo_code[client_ids][]" value="">
+          <ul class="doc-list">
+            <% @selected_clients.each do |client| %>
+              <li><label style="font-weight:500"><input type="checkbox" name="promo_code[client_ids][]" value="<%= client.id %>" checked> <%= client.full_name %> <small class="muted"><%= client.phone %></small></label></li>
+            <% end %>
+            <% @client_results.each do |client| %>
+              <li><label style="font-weight:500"><input type="checkbox" name="promo_code[client_ids][]" value="<%= client.id %>"> <%= client.full_name %> <small class="muted"><%= client.phone %></small></label></li>
+            <% end %>
+          </ul>
+          <% if params[:search_clients].present? && @client_q.present? && @client_results.empty? %>
+            <p class="muted">No other clients match “<%= @client_q %>”.</p>
+          <% end %>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input type="text" name="promo_code[client_q]" value="<%= @client_q %>" placeholder="Search name or phone">
+            <button type="submit" name="search_clients" value="1" class="btn">Search clients</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px">
+    <button type="submit" name="preview" value="1" class="btn">Check for losses</button>
+    <button type="submit" class="btn primary">Save</button>
+    <%= link_to "Cancel", @code.persisted? ? admin_promo_code_path(@code) : admin_promo_codes_path, class: "btn" %>
+  </div>
+<% end %>

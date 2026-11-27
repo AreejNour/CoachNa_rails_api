@@ -1,0 +1,7 @@
+<% if loss && loss[:affected_count].positive? %>
+  <div class="flash warn" role="alert">
+    CoachNa loses money on <%= loss[:affected_count] %> package(s) with this code (worst case <%= egp(loss[:worst_loss_piastres]) %>)
+  </div>
+<% elsif loss %>
+  <div class="flash notice" role="status">No active package loses CoachNa money with this code.</div>
+<% end %>

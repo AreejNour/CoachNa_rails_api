@@ -6,7 +6,7 @@ module CoachApp
     def self.summary(coach)
       payments = Payment.where(purpose: "subscription", status: "paid")
                         .joins(:subscription).where(subscriptions: { coach_id: coach.id })
-                        .includes(subscription: [ :client, :coach_package ])
+                        .includes(subscription: [ :client, :coach_package, :promo_code ])
                         .order(paid_at: :desc, id: :desc)
       EarningsJson.call(payments)
     end

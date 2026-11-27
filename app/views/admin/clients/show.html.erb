@@ -42,7 +42,7 @@
 
     <div class="card">
       <div class="card-head"><h2>Subscriptions</h2></div>
-      <% if @client.subscriptions.empty? %>
+      <% if @subscriptions.empty? %>
         <div class="card-body"><p class="muted" style="padding:10px 0">No subscriptions.</p></div>
       <% else %>
         <table>
@@ -50,7 +50,7 @@
             <tr><th>Status</th><th>Coach</th><th>Package</th><th>Started</th><th>Ends</th></tr>
           </thead>
           <tbody>
-            <% @client.subscriptions.sort_by { |s| s.created_at || Time.at(0) }.reverse.each do |sub| %>
+            <% @subscriptions.each do |sub| %>
               <tr>
                 <td><%= link_to status_pill(sub.status), admin_subscription_path(sub) %></td>
                 <td><%= sub.coach&.full_name %></td>

@@ -57,6 +57,7 @@
     .flash{padding:11px 15px;border-radius:9px;margin-bottom:18px;font-weight:500}
     .flash.notice{background:var(--ok-bg);color:var(--ok)}
     .flash.alert{background:var(--danger-bg);color:var(--danger)}
+    .flash.warn{background:var(--warn-bg);color:var(--warn)}
 
     /* ---- stat cards ---- */
     .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
@@ -169,6 +170,9 @@
           <% end %>
           <%= link_to admin_money_path, class: ("active" if admin_nav_active?(:money)) do %>
             <span class="ic">💰</span> Money
+          <% end %>
+          <%= link_to admin_promo_codes_path, class: ("active" if admin_nav_active?(:promo_codes)) do %>
+            <span class="ic">🏷️</span> Promo codes
           <% end %>
         </nav>
         <div class="userbox">

@@ -1,0 +1,10 @@
+<div class="crumbs"><%= link_to "Promo codes", admin_promo_codes_path %> › New</div>
+
+<div class="page-head">
+  <div>
+    <h1>New promo code</h1>
+    <div class="sub">CoachNa pays the discount: the coach still gets their full share.</div>
+  </div>
+</div>
+
+<%= render "form", url: admin_promo_codes_path, method: :post %>

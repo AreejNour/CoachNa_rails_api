@@ -111,4 +111,92 @@ class Admin::SubscriptionsControllerTest < ActionDispatch::IntegrationTest
     get admin_subscription_path(sub)
     assert_redirected_to "/admin/login"
   end
+  test "show displays the promo code and discount" do
+    sign_in
+    sub = make_subscription(client_name: "Promo Pam", coach_name: "Coach A")
+    admin = AdminUser.find_by!(email: "team@coachna.app")
+    promo = PromoCode.create!(code: "SUMMER50", kind: "percent", value: 50, funded_by: "platform",
+                              created_by_admin_id: admin.id)
+    sub.update!(promo_code_id: promo.id, discount_piastres: 25_000, commission_piastres: -20_000)
+
+    get admin_subscription_path(sub)
+    assert_response :ok
+    assert_includes @response.body, "SUMMER50"
+    assert_includes @response.body, "EGP 250.00"
+  end
+
+  test "index shows the promo code and discount on a row" do
+    sign_in
+    sub = make_subscription(client_name: "Promo Pam", coach_name: "Coach A")
+    admin = AdminUser.find_by!(email: "team@coachna.app")
+    promo = PromoCode.create!(code: "SUMMER50", kind: "percent", value: 50, funded_by: "platform",
+                              created_by_admin_id: admin.id)
+    sub.update!(promo_code_id: promo.id, discount_piastres: 25_000)
+
+    get admin_subscriptions_path
+    assert_includes @response.body, "SUMMER50"
+    assert_includes @response.body, "EGP 250.00"
+  end
+
+  test "the default list hides checkout_open rows" do
+    sign_in
+    make_subscription(client_name: "Active Amy", coach_name: "Coach A", status: "active")
+    make_subscription(client_name: "Open Olga", coach_name: "Coach B", status: "checkout_open")
+
+    get admin_subscriptions_path
+    assert_includes @response.body, "Active Amy"
+    assert_not_includes @response.body, "Open Olga"
+  end
+
+  test "the checkout_open filter shows those rows with their label" do
+    sign_in
+    make_subscription(client_name: "Active Amy", coach_name: "Coach A", status: "active")
+    make_subscription(client_name: "Open Olga", coach_name: "Coach B", status: "checkout_open")
+
+    get admin_subscriptions_path(status: "checkout_open")
+    assert_includes @response.body, "Open Olga"
+    assert_not_includes @response.body, "Active Amy"
+    assert_includes @response.body, "Card form opened, not paid"
+  end
+
+  test "the status filter offers checkout_open with its label" do
+    sign_in
+    get admin_subscriptions_path
+    assert_includes @response.body, '<option value="checkout_open"'
+    assert_includes @response.body, "Card form opened, not paid"
+  end
+  test "the list shows the list price and what was paid" do
+    sign_in
+    sub = make_subscription(client_name: "Promo Pam", coach_name: "Coach A")
+    sub.update!(discount_piastres: 12_345)
+
+    get admin_subscriptions_path
+    assert_includes @response.body, "List price"
+    assert_includes @response.body, "<th class=\"right\">Paid</th>"
+    assert_includes @response.body, "EGP 376.55" # 50000 - 12345
+  end
+
+  def replace!(sub)
+    sub.update!(status: "cancelled")
+    Payment.create!(client_id: sub.client_id, purpose: "subscription", subscription_id: sub.id,
+                    amount_piastres: 50_000, provider: "paymob", status: "failed", failure_reason: "replaced")
+  end
+
+  test "the default list hides replaced checkouts; the cancelled filter shows them" do
+    sign_in
+    replace!(make_subscription(client_name: "Replaced Rita", coach_name: "Coach A"))
+    cancelled = make_subscription(client_name: "Cancelled Carl", coach_name: "Coach B")
+    cancelled.update!(status: "cancelled")
+    # An order payment (no subscription) must not break the NOT IN filter.
+    Payment.create!(client_id: cancelled.client_id, purpose: "order", order_id: SecureRandom.uuid,
+                    amount_piastres: 1_000, provider: "simulated", status: "failed", failure_reason: "replaced")
+
+    get admin_subscriptions_path
+    assert_includes @response.body, "Cancelled Carl"
+    assert_not_includes @response.body, "Replaced Rita"
+
+    get admin_subscriptions_path(status: "cancelled")
+    assert_includes @response.body, "Replaced Rita"
+    assert_includes @response.body, "Cancelled Carl"
+  end
 end

@@ -82,6 +82,9 @@ Rails.application.routes.draw do
     post "clients/:id/reactivate", to: "clients#reactivate", as: :reactivate_client
     post "clients/:id/deactivate", to: "clients#deactivate", as: :deactivate_client
     get "money", to: "money#index", as: :money
+    resources :promo_codes, path: "promo-codes", only: %i[index new create show edit update] do
+      post :deactivate, on: :member
+    end
   end
 
   # Last, so every unknown path gets a 404 in the API's envelope.

@@ -1,0 +1,51 @@
+<% code = @code %>
+<div class="crumbs"><%= link_to "Promo codes", admin_promo_codes_path %> › <%= code.code %></div>
+
+<div class="page-head">
+  <div>
+    <h1><%= code.code %></h1>
+    <div class="sub"><%= promo_status_pill(code) %> · <%= promo_discount_label(code) %> · CoachNa pays the discount</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <%= link_to "Edit", edit_admin_promo_code_path(code), class: "btn" %>
+    <% if code.active %>
+      <%= button_to "Switch off", deactivate_admin_promo_code_path(code), method: :post, class: "btn danger",
+                    form: { onsubmit: "return confirm('Switch off #{code.code}? Patients can no longer use it.')" } %>
+    <% end %>
+  </div>
+</div>
+
+<%= render "loss_warning", loss: @loss %>
+
+<div class="detail">
+  <div class="card">
+    <div class="card-head"><h2>Rules</h2></div>
+    <div class="card-body">
+      <div class="field"><span class="k">Discount</span><span class="v"><%= promo_discount_label(code) %></span></div>
+      <div class="field"><span class="k">Dates (Cairo time)</span><span class="v"><%= promo_dates(code) %></span></div>
+      <div class="field"><span class="k">Uses (paid) / limit</span><span class="v"><%= @uses %> / <%= code.max_uses || "∞" %></span></div>
+      <div class="field"><span class="k">Coach</span><span class="v"><%= code.restrict_coach&.full_name || "Any" %></span></div>
+      <div class="field"><span class="k">Package</span><span class="v"><%= code.restrict_package&.name || "Any" %></span></div>
+      <div class="field"><span class="k">Minimum price</span><span class="v"><%= code.min_price_piastres ? egp(code.min_price_piastres) : "—" %></span></div>
+      <div class="field"><span class="k">Package length (days)</span><span class="v"><%= [ code.min_duration_days || "any", code.max_duration_days || "any" ].join(" – ") %></span></div>
+      <div class="field"><span class="k">New patients only</span><span class="v"><%= code.new_patients_only ? "Yes" : "No" %></span></div>
+      <div class="field"><span class="k">Created by</span><span class="v"><%= code.created_by_admin&.name || "—" %></span></div>
+      <div class="field"><span class="k">Created</span><span class="v"><%= code.created_at&.in_time_zone(PromoCode::TIME_ZONE)&.strftime("%Y-%m-%d %H:%M") %> (Cairo)</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Specific patients</h2></div>
+    <% if @allowed_clients.empty? %>
+      <div class="card-body"><p class="muted" style="padding:10px 0">Anyone can use this code.</p></div>
+    <% else %>
+      <div class="card-body">
+        <ul class="doc-list">
+          <% @allowed_clients.each do |client| %>
+            <li><%= link_to client.full_name, admin_client_path(client) %> <small><%= client.phone %></small></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -15,7 +15,9 @@
       <div class="card-body">
         <div class="field"><span class="k">Status</span><span class="v"><%= status_pill(sub.status) %></span></div>
         <div class="field"><span class="k">Price</span><span class="v"><%= number_to_currency(sub.price_piastres / 100.0, unit: "EGP ", precision: 2) %></span></div>
-        <div class="field"><span class="k">Commission</span><span class="v"><%= sub.commission_percent %>% (<%= number_to_currency(sub.commission_piastres / 100.0, unit: "EGP ", precision: 2) %>)</span></div>
+        <div class="field"><span class="k">Promo code</span><span class="v"><%= sub.promo_code ? link_to(sub.promo_code.code, admin_promo_code_path(sub.promo_code)) : "—" %></span></div>
+        <div class="field"><span class="k">Discount</span><span class="v"><%= egp(sub.discount_piastres) %></span></div>
+        <div class="field"><span class="k">Commission</span><span class="v"><%= sub.commission_percent %>% (<%= egp(sub.commission_piastres) %>)</span></div>
         <div class="field"><span class="k">Starts</span><span class="v"><%= sub.starts_at&.strftime("%Y-%m-%d %H:%M") %></span></div>
         <div class="field"><span class="k">Ends</span><span class="v"><%= sub.ends_at&.strftime("%Y-%m-%d %H:%M") %></span></div>
         <div class="field"><span class="k">Questionnaire submitted</span><span class="v"><%= sub.questionnaire_submitted_at&.strftime("%Y-%m-%d %H:%M") || "—" %></span></div>

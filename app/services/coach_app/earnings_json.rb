@@ -18,6 +18,13 @@ module CoachApp
       sub = payment.subscription
       gross = payment.amount_piastres
       commission = sub.commission_piastres
+      # A CoachNa-funded code is CoachNa's business: the coach sees the list price and the plain
+      # commission (both put the discount back), and the same net. Coach-funded codes show the real
+      # amounts, since the coach gave that discount.
+      if sub.promo_code&.funded_by == "platform"
+        gross += sub.discount_piastres
+        commission += sub.discount_piastres
+      end
       {
         id: payment.id,
         clientFirstName: sub.client.full_name.to_s.split.first || "",

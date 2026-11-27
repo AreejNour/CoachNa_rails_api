@@ -192,7 +192,7 @@ class CoachApp::PlanImportControllerTest < ActionDispatch::IntegrationTest
     ENV["ANTHROPIC_API_KEY"] = original if original
   end
 
-  %w[pending_payment payment_failed].each do |status|
+  %w[checkout_open pending_payment payment_failed].each do |status|
     test "a #{status} subscription is 404 and nothing is read or stored" do
       @sub.update!(status: status)
       stubbing_reader(raw_plan) { import }
