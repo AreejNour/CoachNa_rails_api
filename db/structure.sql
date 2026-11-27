@@ -559,10 +559,12 @@ CREATE TABLE public.promo_codes (
     active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    max_uses_per_client integer DEFAULT 1,
     CONSTRAINT promo_codes_code_format CHECK ((code ~ '^[A-Z0-9]{3,20}$'::text)),
     CONSTRAINT promo_codes_fixed_min CHECK (((kind <> 'fixed'::text) OR (value >= 100))),
     CONSTRAINT promo_codes_funded_by_valid CHECK ((funded_by = ANY (ARRAY['platform'::text, 'coach'::text]))),
     CONSTRAINT promo_codes_kind_valid CHECK ((kind = ANY (ARRAY['percent'::text, 'fixed'::text]))),
+    CONSTRAINT promo_codes_max_uses_per_client_positive CHECK (((max_uses_per_client IS NULL) OR (max_uses_per_client > 0))),
     CONSTRAINT promo_codes_percent_range CHECK (((kind <> 'percent'::text) OR ((value >= 1) AND (value <= 99))))
 );
 

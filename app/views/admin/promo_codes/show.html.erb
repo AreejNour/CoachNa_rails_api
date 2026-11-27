@@ -24,6 +24,7 @@
       <div class="field"><span class="k">Discount</span><span class="v"><%= promo_discount_label(code) %></span></div>
       <div class="field"><span class="k">Dates (Cairo time)</span><span class="v"><%= promo_dates(code) %></span></div>
       <div class="field"><span class="k">Uses (paid) / limit</span><span class="v"><%= @uses %> / <%= code.max_uses || "∞" %></span></div>
+      <div class="field"><span class="k">Uses per patient</span><span class="v"><%= code.max_uses_per_client || "∞" %></span></div>
       <div class="field"><span class="k">Coach</span><span class="v"><%= code.restrict_coach&.full_name || "Any" %></span></div>
       <div class="field"><span class="k">Package</span><span class="v"><%= code.restrict_package&.name || "Any" %></span></div>
       <div class="field"><span class="k">Minimum price</span><span class="v"><%= code.min_price_piastres ? egp(code.min_price_piastres) : "—" %></span></div>

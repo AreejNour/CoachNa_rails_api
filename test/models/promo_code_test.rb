@@ -23,6 +23,13 @@ class PromoCodeTest < ActiveSupport::TestCase
     assert build.save
   end
 
+  test "uses per patient defaults to 1, may be empty, and must be positive" do
+    assert_equal 1, PromoCode.new.max_uses_per_client
+    assert build(max_uses_per_client: nil).valid?
+    assert build(max_uses_per_client: 3).valid?
+    assert_not build(max_uses_per_client: 0).valid?
+  end
+
   test "code is upcased before validation" do
     code = build(code: "summer50")
     assert code.valid?

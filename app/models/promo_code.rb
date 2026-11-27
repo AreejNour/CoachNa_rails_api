@@ -27,7 +27,7 @@ class PromoCode < ApplicationRecord
   validates :value, numericality: { only_integer: true }
   validates :funded_by, inclusion: { in: %w[platform], message: "must be platform" }
   validates :created_by_admin_id, presence: true
-  validates :max_discount_piastres, :min_price_piastres, :max_uses,
+  validates :max_discount_piastres, :min_price_piastres, :max_uses, :max_uses_per_client,
             numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :min_duration_days, :max_duration_days,
             numericality: { only_integer: true, greater_than: 0 }, allow_nil: true

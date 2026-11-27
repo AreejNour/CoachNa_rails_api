@@ -24,7 +24,7 @@ module Admin
     end
 
     def new
-      @code = PromoCode.new(kind: "percent", active: true)
+      @code = PromoCode.new(kind: "percent", active: true, max_uses_per_client: 1)
       prepare_form
     end
 
@@ -81,7 +81,7 @@ module Admin
     def form_params
       params.fetch(:promo_code, {}).permit(
         :code, :kind, :value, :max_discount_egp, :min_price_egp, :restrict_coach_id, :restrict_package_id,
-        :min_duration_days, :max_duration_days, :new_patients_only, :starts_at, :ends_at, :max_uses,
+        :min_duration_days, :max_duration_days, :new_patients_only, :starts_at, :ends_at, :max_uses, :max_uses_per_client,
         :active, :client_q, client_ids: []
       )
     end
@@ -103,6 +103,7 @@ module Admin
         starts_at: cairo_time(p[:starts_at]),
         ends_at: cairo_time(p[:ends_at]),
         max_uses: p[:max_uses].presence,
+        max_uses_per_client: p[:max_uses_per_client].presence,
         active: p[:active] == "1"
       }
       @code.persisted? ? attrs : attrs.merge(code: p[:code])
@@ -174,7 +175,7 @@ module Admin
         new_patients_only: c.new_patients_only ? "1" : "0",
         starts_at: c.starts_at&.in_time_zone(PromoCode::TIME_ZONE)&.strftime("%Y-%m-%dT%H:%M"),
         ends_at: c.ends_at&.in_time_zone(PromoCode::TIME_ZONE)&.strftime("%Y-%m-%dT%H:%M"),
-        max_uses: c.max_uses, active: c.active ? "1" : "0"
+        max_uses: c.max_uses, max_uses_per_client: c.max_uses_per_client, active: c.active ? "1" : "0"
       }
     end
   end

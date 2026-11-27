@@ -306,7 +306,7 @@ class Admin::PromoCodesControllerTest < ActionDispatch::IntegrationTest
     get edit_admin_promo_code_path(code)
     assert_response :ok
     assert_match(/<option value="#{@coach.id}" selected>Mona Coach \(suspended\)/, @response.body)
-    assert_match(/<option value="#{@pkg.id}" selected>.*Gold Plan.*\(inactive\)/m, @response.body)
+    assert_match(/<option value="#{@pkg.id}" data-coach-id="#{@coach.id}" selected>.*Gold Plan.*\(inactive\)/m, @response.body)
 
     # The browser posts back what the form selected.
     patch admin_promo_code_path(code), params: form_params(value: "15", restrict_coach_id: @coach.id,
@@ -338,6 +338,46 @@ class Admin::PromoCodesControllerTest < ActionDispatch::IntegrationTest
     code = PromoCode.find_by!(code: "SUMMER50")
     assert_redirected_to admin_promo_code_path(code)
     assert_equal [ a.id ], code.promo_code_clients.pluck(:client_id)
+  end
+
+  test "create saves uses per patient, or none when blank" do
+    sign_in
+    post admin_promo_codes_path, params: form_params(code: "THREE", max_uses_per_client: "3")
+    assert_equal 3, PromoCode.find_by!(code: "THREE").max_uses_per_client
+    post admin_promo_codes_path, params: form_params(code: "NOLIMIT", max_uses_per_client: "")
+    assert_nil PromoCode.find_by!(code: "NOLIMIT").max_uses_per_client
+  end
+
+  test "new and edit show the uses per patient value" do
+    sign_in
+    get new_admin_promo_code_path
+    assert_select "input[name='promo_code[max_uses_per_client]'][value='1']"
+    code = make_code
+    get edit_admin_promo_code_path(code)
+    assert_select "input[name='promo_code[max_uses_per_client]'][value='1']"
+    code.update!(max_uses_per_client: nil)
+    get edit_admin_promo_code_path(code)
+    assert_select "input[name='promo_code[max_uses_per_client]'][value='']"
+  end
+
+  test "package options carry their coach id for the coach filter" do
+    sign_in
+    get new_admin_promo_code_path
+    assert_select "select#promo_code_restrict_package_id option[value='#{@pkg.id}'][data-coach-id='#{@coach.id}']"
+  end
+
+  test "index and show display the per-patient limit" do
+    sign_in
+    one = make_code
+    none = make_code(code: "FREEFORALL", max_uses_per_client: nil)
+    get admin_promo_codes_path
+    assert_select "th", text: "Per patient"
+    assert_select "tr", text: /SUMMER50.*\b1\b/m
+    assert_select "tr", text: /FREEFORALL.*∞/m
+    get admin_promo_code_path(none)
+    assert_select ".field", text: /Uses per patient\s*∞/
+    get admin_promo_code_path(one)
+    assert_select ".field", text: /Uses per patient\s*1/
   end
 
   test "there is no delete" do
