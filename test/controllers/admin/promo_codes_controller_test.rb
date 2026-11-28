@@ -165,8 +165,9 @@ class Admin::PromoCodesControllerTest < ActionDispatch::IntegrationTest
     code = PromoCode.find_by!(code: "SUMMER50")
     assert_equal @coach.id, code.restrict_coach_id
     assert_equal @pkg.id, code.restrict_package_id
-    assert_equal 30, code.min_duration_days
-    assert_equal 90, code.max_duration_days
+    # Package length is no longer set from the admin form.
+    assert_nil code.min_duration_days
+    assert_nil code.max_duration_days
     assert_equal 5, code.max_uses
     assert code.new_patients_only
     assert_equal [ a.id ], code.promo_code_clients.pluck(:client_id)
@@ -358,6 +359,16 @@ class Admin::PromoCodesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, code.max_uses_per_client
     patch admin_promo_code_path(code), params: form_params(value: "40", max_uses_per_client: "")
     assert_nil code.reload.max_uses_per_client
+  end
+
+  test "the form has no package length fields and styled date pickers" do
+    sign_in
+    get new_admin_promo_code_path
+    assert_select "input[name='promo_code[min_duration_days]']", 0
+    assert_select "input[name='promo_code[max_duration_days]']", 0
+    assert_select "input[type=datetime-local][name='promo_code[starts_at]']"
+    assert_select "input[type=datetime-local][name='promo_code[ends_at]']"
+    assert_match(/input\[type=datetime-local\]/, response.body)
   end
 
   test "new and edit show the uses per patient value" do

@@ -81,7 +81,7 @@ module Admin
     def form_params
       params.fetch(:promo_code, {}).permit(
         :code, :kind, :value, :max_discount_egp, :min_price_egp, :restrict_coach_id, :restrict_package_id,
-        :min_duration_days, :max_duration_days, :new_patients_only, :starts_at, :ends_at, :max_uses, :max_uses_per_client,
+        :new_patients_only, :starts_at, :ends_at, :max_uses, :max_uses_per_client,
         :active, :client_q, client_ids: []
       )
     end
@@ -97,8 +97,6 @@ module Admin
         min_price_piastres: egp_to_piastres(p[:min_price_egp]),
         restrict_coach_id: p[:restrict_coach_id].presence,
         restrict_package_id: p[:restrict_package_id].presence,
-        min_duration_days: p[:min_duration_days].presence,
-        max_duration_days: p[:max_duration_days].presence,
         new_patients_only: p[:new_patients_only] == "1",
         starts_at: cairo_time(p[:starts_at]),
         ends_at: cairo_time(p[:ends_at]),
@@ -172,7 +170,6 @@ module Admin
         max_discount_egp: piastres_to_egp.call(c.max_discount_piastres),
         min_price_egp: piastres_to_egp.call(c.min_price_piastres),
         restrict_coach_id: c.restrict_coach_id, restrict_package_id: c.restrict_package_id,
-        min_duration_days: c.min_duration_days, max_duration_days: c.max_duration_days,
         new_patients_only: c.new_patients_only ? "1" : "0",
         starts_at: c.starts_at&.in_time_zone(PromoCode::TIME_ZONE)&.strftime("%Y-%m-%dT%H:%M"),
         ends_at: c.ends_at&.in_time_zone(PromoCode::TIME_ZONE)&.strftime("%Y-%m-%dT%H:%M"),

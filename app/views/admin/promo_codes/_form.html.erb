@@ -43,12 +43,17 @@
           <input type="text" id="promo_code_max_discount_egp" name="promo_code[max_discount_egp]" value="<%= f[:max_discount_egp] %>" inputmode="decimal">
         </div>
         <div class="form-row">
-          <label for="promo_code_starts_at">Starts (Cairo time)</label>
-          <input type="datetime-local" id="promo_code_starts_at" name="promo_code[starts_at]" value="<%= f[:starts_at] %>">
-        </div>
-        <div class="form-row">
-          <label for="promo_code_ends_at">Ends (Cairo time)</label>
-          <input type="datetime-local" id="promo_code_ends_at" name="promo_code[ends_at]" value="<%= f[:ends_at] %>">
+          <div class="form-pair">
+            <div>
+              <label for="promo_code_starts_at">Starts (Cairo time)</label>
+              <input type="datetime-local" id="promo_code_starts_at" name="promo_code[starts_at]" value="<%= f[:starts_at] %>">
+            </div>
+            <div>
+              <label for="promo_code_ends_at">Ends (Cairo time)</label>
+              <input type="datetime-local" id="promo_code_ends_at" name="promo_code[ends_at]" value="<%= f[:ends_at] %>">
+            </div>
+          </div>
+          <small class="muted">Leave Starts empty to start now, and Ends empty for no end date.</small>
         </div>
         <div class="form-row">
           <label for="promo_code_max_uses">Total paid uses limit</label>
@@ -92,16 +97,6 @@
         <div class="form-row">
           <label for="promo_code_min_price_egp">Minimum package price (EGP)</label>
           <input type="text" id="promo_code_min_price_egp" name="promo_code[min_price_egp]" value="<%= f[:min_price_egp] %>" inputmode="decimal">
-        </div>
-        <div class="form-row" style="display:flex;gap:10px">
-          <div style="flex:1">
-            <label for="promo_code_min_duration_days">Min length (days)</label>
-            <input type="number" id="promo_code_min_duration_days" name="promo_code[min_duration_days]" value="<%= f[:min_duration_days] %>" min="1" step="1">
-          </div>
-          <div style="flex:1">
-            <label for="promo_code_max_duration_days">Max length (days)</label>
-            <input type="number" id="promo_code_max_duration_days" name="promo_code[max_duration_days]" value="<%= f[:max_duration_days] %>" min="1" step="1">
-          </div>
         </div>
         <div class="form-row">
           <input type="hidden" name="promo_code[new_patients_only]" value="0">
