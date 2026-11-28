@@ -29,7 +29,7 @@
   <% else %>
     <table>
       <thead>
-        <tr><th>Name</th><th>Status</th><th>Phone</th><th>Specialties</th><th>Submitted</th><th></th></tr>
+        <tr><th>Name</th><th>Status</th><th>Phone</th><th>Gender</th><th>Specialties</th><th>Submitted</th><th></th></tr>
       </thead>
       <tbody>
         <% @coaches.each do |coach| %>
@@ -37,6 +37,7 @@
             <td><span class="name"><%= link_to coach.full_name, admin_coach_path(coach) %></span></td>
             <td><%= status_pill(coach.status) %></td>
             <td><%= coach.phone %></td>
+            <td><%= coach.gender&.humanize || "—" %></td>
             <td><%= Array(coach.specialties).join(", ") %></td>
             <td><small><%= coach.profile_submitted_at&.strftime("%b %d, %Y · %H:%M") || "—" %></small></td>
             <td class="row-actions"><%= render "admin/shared/action_menu", actions: coach_actions(coach), record_id: coach.id,

@@ -5,6 +5,8 @@
       <div class="card-body">
         <div class="field"><span class="k">Phone</span><span class="v"><%= @coach.phone %></span></div>
         <div class="field"><span class="k">Email</span><span class="v"><%= @coach.email %></span></div>
+        <div class="field"><span class="k">Gender</span><span class="v"><%= @coach.gender&.humanize || "Not set" %></span></div>
+        <div class="field"><span class="k">Date of birth</span><span class="v"><%= @coach.date_of_birth ? "#{@coach.date_of_birth.strftime('%-d %b %Y')} (#{@coach.age})" : "Not set" %></span></div>
         <div class="field"><span class="k">Specialties</span><span class="v"><%= Array(@coach.specialties).join(", ").presence || "—" %></span></div>
         <div class="field"><span class="k">Years of experience</span><span class="v"><%= @coach.years_experience %></span></div>
         <div class="field"><span class="k">Submitted</span><span class="v"><%= @coach.profile_submitted_at&.strftime("%Y-%m-%d %H:%M") || "—" %></span></div>

@@ -23,7 +23,7 @@ class Admin::CoachCreationTest < ActiveSupport::TestCase
       national_id_front: upload(PNG, "image/png", "front.png"),
       national_id_back: upload(PNG, "image/png", "back.png"),
       certificates: [ upload(PDF, "application/pdf", "cert.pdf") ],
-      commission: "20"
+      commission: "20", gender: "female", date_of_birth: "1990-03-12"
     }.merge(overrides)
   end
 
@@ -43,8 +43,7 @@ class Admin::CoachCreationTest < ActiveSupport::TestCase
     assert_not_nil coach.reviewed_at
     assert_not_nil coach.profile_submitted_at
     assert_equal 4, coach.coach_documents.count
-    # "about" stays until the admin form takes gender and date of birth (a later task).
-    assert_equal [ "about" ], CoachApp::ReviewStatus.missing(coach, coach.coach_documents.to_a)
+    assert_equal [], CoachApp::ReviewStatus.missing(coach, coach.coach_documents.to_a)
 
     change = coach.coach_status_changes.sole
     assert_equal [ "incomplete", "approved", "Created by admin", @admin.id ],
@@ -56,6 +55,13 @@ class Admin::CoachCreationTest < ActiveSupport::TestCase
     assert_equal "mona@example.com", row.payload["to"]
     assert row.payload["data"]["link"].start_with?("http://localhost:3003/coach-password/")
     assert_equal "Mona", row.payload["data"]["firstName"]
+  end
+
+  test "gender and date of birth are required and checked" do
+    [ { gender: nil }, { gender: "x" }, { date_of_birth: nil }, { date_of_birth: "2020-01-01" }, { date_of_birth: "nope" } ].each do |bad|
+      assert_raises(Admin::CoachCreation::Invalid, bad.inspect) { Admin::CoachCreation.call(admin: @admin, params: params(bad)) }
+    end
+    assert_equal 0, Coach.count
   end
 
   test "the coach cannot log in with any password until they set one" do

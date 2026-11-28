@@ -62,6 +62,12 @@ class CoachTest < ActiveSupport::TestCase
     end
   end
 
+  test "a 29 Feb 2008 birth is 18 from 1 Mar 2026, not before" do
+    coach = Coach.new(phone: "+201012345604", password_hash: "x", full_name: "A", date_of_birth: Date.new(2008, 2, 29))
+    travel_to(Date.new(2026, 2, 28)) { assert_not coach.valid? }
+    travel_to(Date.new(2026, 3, 1)) { assert coach.valid? }
+  end
+
   test "age around birthdays and 29 Feb" do
     coach = Coach.new(date_of_birth: Date.new(1990, 3, 12))
     assert_equal 35, coach.age(Date.new(2026, 3, 11))

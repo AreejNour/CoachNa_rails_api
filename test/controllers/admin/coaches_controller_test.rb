@@ -263,11 +263,12 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes @response.body, "Reactivate"
   end
 
-  test "show for rejected coach menu says no actions" do
+  test "show for rejected coach menu offers only the details edit" do
     sign_in
     coach = make_coach("Rejected Ray", "rejected", "+201000000042")
     get admin_coach_path(coach)
-    assert_select ".page-head .action-menu", text: /No actions for this status/
+    assert_select ".page-head .action-menu", text: /Edit gender & date of birth/
+    assert_select ".page-head .action-menu", text: /No actions for this status/, count: 0
   end
 
   test "dialog fields have labels associated with inputs" do
@@ -309,7 +310,7 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
 
     get admin_root_path
     assert_select "tr", text: /Rejected Ray/ do
-      assert_select ".action-menu", count: 0
+      assert_select ".action-panel .action-item", count: 1, text: /Edit gender & date of birth/
     end
   end
 
@@ -426,7 +427,7 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
       profile_photo: upload(png, "image/png", "me.png"),
       national_id_front: upload(png, "image/png", "f.png"),
       national_id_back: upload(png, "image/png", "b.png"),
-      commission: "20"
+      commission: "20", gender: "female", date_of_birth: "1990-03-12"
     }.merge(overrides)
   end
 
@@ -517,5 +518,82 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     post "/admin/coaches/#{coach.id}/send-password-email"
     assert flash[:alert].present?
     assert_equal 0, OutboxMessage.where(kind: "email").count
+  end
+
+  test "new form has gender and date of birth fields" do
+    sign_in
+    get "/admin/coaches/new"
+    assert_includes @response.body, 'name="coach[gender]"'
+    assert_includes @response.body, 'name="coach[date_of_birth]"'
+  end
+
+  test "create without gender or date of birth re-renders with errors" do
+    sign_in
+    post "/admin/coaches", params: { coach: new_coach_params(gender: nil, date_of_birth: nil) }
+    assert_response :unprocessable_entity
+    assert_includes @response.body, "Gender is required."
+    assert_includes @response.body, "Date of birth is required"
+    assert_equal 0, Coach.count
+  end
+
+  test "create saves gender and date of birth" do
+    sign_in
+    CoachApp::QueuePublisher.adapter = CoachApp::QueuePublisher::TestAdapter.new
+    post "/admin/coaches", params: { coach: new_coach_params }
+    coach = Coach.find_by!(email: "mona@example.com")
+    assert_equal "female", coach.gender
+    assert_equal Date.new(1990, 3, 12), coach.date_of_birth
+  ensure
+    CoachApp::QueuePublisher.adapter = nil
+  end
+
+  test "coach page shows gender and date of birth with age, or Not set" do
+    sign_in
+    coach = make_coach("Gina", "approved", "+201000000071")
+    get "/admin/coaches/#{coach.id}"
+    assert_includes @response.body, "Not set"
+    coach.update!(gender: "female", date_of_birth: Date.new(1990, 3, 12))
+    get "/admin/coaches/#{coach.id}"
+    assert_includes @response.body, "Female"
+    assert_includes @response.body, "12 Mar 1990 (#{coach.age})"
+  end
+
+  test "index has a Gender column" do
+    sign_in
+    make_coach("Gina", "approved", "+201000000072").update!(gender: "female")
+    get "/admin"
+    assert_includes @response.body, "<th>Gender</th>"
+    assert_includes @response.body, "<td>Female</td>"
+  end
+
+  test "an approved coach's menu offers a pre-filled gender and date of birth dialog" do
+    sign_in
+    coach = make_coach("Gina", "approved", "+201000000073")
+    coach.update!(gender: "male", date_of_birth: Date.new(1990, 3, 12))
+    get "/admin/coaches/#{coach.id}"
+    assert_includes @response.body, "Edit gender &amp; date of birth"
+    assert_includes @response.body, 'value="1990-03-12"'
+    assert_match(/<option selected="selected" value="male">Male<\/option>/, @response.body)
+  end
+
+  test "details saves valid values and honours return_to" do
+    sign_in
+    coach = make_coach("Gina", "approved", "+201000000074")
+    post "/admin/coaches/#{coach.id}/details", params: { gender: "female", date_of_birth: "1990-03-12", return_to: "/admin?status=approved" }
+    assert_redirected_to "/admin?status=approved"
+    assert_equal "Coach details saved.", flash[:notice]
+    assert_equal ["female", Date.new(1990, 3, 12)], coach.reload.then { [ _1.gender, _1.date_of_birth ] }
+  end
+
+  test "details refuses an age of 17, a bad gender and a bad date" do
+    sign_in
+    coach = make_coach("Gina", "approved", "+201000000075")
+    [ { gender: "female", date_of_birth: 17.years.ago.to_date.to_s }, { gender: "x", date_of_birth: "1990-03-12" },
+      { gender: "male", date_of_birth: "nope" }, { gender: "", date_of_birth: "" } ].each do |attrs|
+      post "/admin/coaches/#{coach.id}/details", params: attrs
+      assert flash[:alert].present?, attrs.inspect
+      assert_nil coach.reload.gender
+      assert_nil coach.date_of_birth
+    end
   end
 end

@@ -74,6 +74,7 @@ Rails.application.routes.draw do
     post "coaches/:id/suspend", to: "coaches#suspend", as: :suspend_coach
     post "coaches/:id/reactivate", to: "coaches#reactivate", as: :reactivate_coach
     post "coaches/:id/deactivate", to: "coaches#deactivate", as: :deactivate_coach
+    post "coaches/:id/details", to: "coaches#update_details", as: :edit_details_coach
     post "coaches/:id/send-password-email", to: "coaches#send_password_email", as: :send_password_email_coach
     get "reviews", to: "reviews#index", as: :reviews
     get "reviews/:id", to: "reviews#show", as: :review

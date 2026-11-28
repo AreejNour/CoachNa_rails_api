@@ -29,7 +29,7 @@ module Admin
       redirect_to admin_coach_path(@coach), notice: "Coach created and approved. Setup email sent."
     rescue Admin::CoachCreation::Invalid => e
       @errors = e.errors + [ "Choose the files again." ]
-      @form = attrs.respond_to?(:permit) ? attrs.permit(:full_name, :phone, :country, :email, :bio, :years_experience, :commission, specialties: []).to_h : {}
+      @form = attrs.respond_to?(:permit) ? attrs.permit(:full_name, :phone, :country, :email, :bio, :years_experience, :commission, :gender, :date_of_birth, specialties: []).to_h : {}
       render :new, status: :unprocessable_entity
     end
 
@@ -92,6 +92,20 @@ module Admin
       decision(coach, "Coach deactivated.") { Admin::CoachDecision.deactivate!(coach: coach, admin: current_admin, reason: params[:reason]) }
     end
 
+    # Any status: an admin can give an approved coach a gender and date of birth the coach app can't edit.
+    def update_details
+      coach = Coach.find(params[:id])
+      coach.assign_attributes(gender: params[:gender].presence, date_of_birth: parse_date(params[:date_of_birth]))
+      if coach.gender.nil? || coach.date_of_birth.nil?
+        flash[:alert] = "Choose a gender and a valid date of birth."
+      elsif coach.save
+        flash[:notice] = "Coach details saved."
+      else
+        flash[:alert] = coach.errors.include?(:date_of_birth) ? "Date of birth must be a real date, not in the future, and 18 or older." : coach.errors.full_messages.to_sentence
+      end
+      redirect_to(safe_admin_return_to(params[:return_to]) || admin_coach_path(coach))
+    end
+
     def send_password_email
       coach = Coach.find(params[:id])
       if coach.email.blank? || !%w[approved suspended].include?(coach.status)
@@ -104,6 +118,12 @@ module Admin
     end
 
     private
+
+    def parse_date(value)
+      Date.iso8601(value.to_s) if value.to_s.match?(/\A\d{4}-\d{2}-\d{2}\z/)
+    rescue Date::Error
+      nil
+    end
 
     def decision(coach, notice)
       yield
