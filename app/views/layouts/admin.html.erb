@@ -128,9 +128,18 @@
     /* ---- forms ---- */
     .form-row{display:block;margin:0 0 14px}
     label{display:block;font-size:13px;font-weight:600;margin:0 0 6px;color:var(--ink)}
-    input[type=text],input[type=email],input[type=password],input[type=number],select,textarea{
+    input[type=text],input[type=email],input[type=password],input[type=number],
+    input[type=date],input[type=datetime-local],select,textarea{
          width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;
          font-size:14px;font-family:inherit;color:var(--ink);background:#fff}
+    input[type=date],input[type=datetime-local]{cursor:pointer}
+    input[type=date]::-webkit-calendar-picker-indicator,
+    input[type=datetime-local]::-webkit-calendar-picker-indicator{
+         cursor:pointer;opacity:.65;padding:4px;border-radius:6px}
+    input[type=date]::-webkit-calendar-picker-indicator:hover,
+    input[type=datetime-local]::-webkit-calendar-picker-indicator:hover{opacity:1;background:var(--brand-tint)}
+    .form-pair{display:flex;gap:10px;flex-wrap:wrap}
+    .form-pair > div{flex:1;min-width:200px}
     textarea{min-height:76px;resize:vertical}
     input:focus,select:focus,textarea:focus{outline:2px solid var(--brand-tint);border-color:var(--brand)}
     .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
