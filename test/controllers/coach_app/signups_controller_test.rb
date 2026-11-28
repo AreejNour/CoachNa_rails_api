@@ -202,7 +202,7 @@ class CoachApp::SignupsControllerTest < ActionDispatch::IntegrationTest
     assert CoachApp::Password.verify(PASSWORD, coach.password_hash)
     assert_equal({
       "id" => coach.id, "phone" => E164, "email" => "rania@example.com", "fullName" => "Rania Adel", "bio" => nil,
-      "yearsExperience" => nil, "specialties" => [], "status" => "incomplete", "rejectionReason" => nil,
+      "yearsExperience" => nil, "specialties" => [], "gender" => nil, "dateOfBirth" => nil, "status" => "incomplete", "rejectionReason" => nil,
       "phoneVerifiedAt" => coach.phone_verified_at.iso8601(3), "profileSubmittedAt" => nil
     }, data["coach"])
   end

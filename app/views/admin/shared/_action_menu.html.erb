@@ -32,7 +32,15 @@
       <%= form_with url: action[:url], method: :post do |f| %>
         <h3 id="action-<%= record_id %>-<%= action[:key] %>-title"><%= action[:label] %></h3>
         <div class="form-row">
-          <% if action[:input] == :commission %>
+          <% if action[:input] == :gender_dob %>
+            <% values = action[:values] || {} %>
+            <%= label_tag "action-#{record_id}-#{action[:key]}-field", "Gender" %>
+            <%= select_tag :gender, options_for_select(Coach::GENDERS.map { |g| [ g.humanize, g ] }, values[:gender]),
+                  id: "action-#{record_id}-#{action[:key]}-field", include_blank: "Choose", required: true %>
+            <%= label_tag "action-#{record_id}-#{action[:key]}-dob", "Date of birth" %>
+            <%= date_field_tag :date_of_birth, values[:date_of_birth], id: "action-#{record_id}-#{action[:key]}-dob",
+                  min: "1900-01-01", max: Date.current.iso8601, required: true %>
+          <% elsif action[:input] == :commission %>
             <%= label_tag "action-#{record_id}-#{action[:key]}-field", "Commission (%)" %>
             <%= number_field_tag :commission, nil, id: "action-#{record_id}-#{action[:key]}-field", step: "any", min: 0, max: 100, required: true %>
           <% else %>

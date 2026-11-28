@@ -8,14 +8,15 @@ class AdminHelperTest < ActionView::TestCase
 
   test "coach_actions for pending_review" do
     a = coach_actions(coach("pending_review"))
-    assert_equal %i[approve request_changes reject], a.map { |x| x[:key] }
-    assert_equal %i[commission reason reason], a.map { |x| x[:input] }
+    assert_equal %i[approve request_changes reject edit_details], a.map { |x| x[:key] }
+    assert_equal %i[commission reason reason gender_dob], a.map { |x| x[:input] }
   end
 
   test "coach_actions for approved, suspended, rejected" do
-    assert_equal %i[suspend deactivate], coach_actions(coach("approved")).map { |x| x[:key] }
-    assert_equal %i[reactivate deactivate], coach_actions(coach("suspended")).map { |x| x[:key] }
-    assert_equal [], coach_actions(coach("rejected"))
+    assert_equal %i[suspend deactivate edit_details], coach_actions(coach("approved")).map { |x| x[:key] }
+    assert_equal %i[reactivate deactivate edit_details], coach_actions(coach("suspended")).map { |x| x[:key] }
+    assert_equal %i[edit_details], coach_actions(coach("rejected")).map { |x| x[:key] }
+    assert_equal %i[edit_details], coach_actions(coach("incomplete")).map { |x| x[:key] }
   end
 
   test "coach_actions offers a set-password email only for approved or suspended coaches with an email" do
@@ -26,6 +27,14 @@ class AdminHelperTest < ActionView::TestCase
     assert_includes coach_actions(Coach.new(id: SecureRandom.uuid, status: "suspended", email: "a@example.com")).map { |x| x[:key] }, :send_password_email
     assert_not_includes coach_actions(coach("approved")).map { |x| x[:key] }, :send_password_email
     assert_not_includes coach_actions(Coach.new(id: SecureRandom.uuid, status: "rejected", email: "a@example.com")).map { |x| x[:key] }, :send_password_email
+  end
+
+  test "edit_details carries its label, input and pre-filled values" do
+    c = Coach.new(id: SecureRandom.uuid, status: "approved", gender: "male", date_of_birth: Date.new(1990, 3, 12))
+    item = coach_actions(c).find { |x| x[:key] == :edit_details }
+    assert_equal "Edit gender & date of birth", item[:label]
+    assert_equal :gender_dob, item[:input]
+    assert_equal({ gender: "male", date_of_birth: "1990-03-12" }, item[:values])
   end
 
   test "coach deactivate is danger" do

@@ -14,7 +14,7 @@ class CoachApp::ReviewControllerTest < ActionDispatch::IntegrationTest
     @coach.coach_documents.create!(type: type, storage_key: "secret/#{key}", mime_type: "image/jpeg", size_bytes: 1)
   end
 
-  def complete_profile = @coach.update!(bio: "Hi", years_experience: 3, specialties: [ "sports" ])
+  def complete_profile = @coach.update!(bio: "Hi", years_experience: 3, specialties: [ "sports" ], gender: "male", date_of_birth: Date.new(1990, 3, 12))
 
   def complete_everything
     complete_profile
@@ -42,7 +42,7 @@ class CoachApp::ReviewControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "about stays missing with no bio, no years or no specialties" do
-    [ { bio: nil }, { years_experience: nil }, { specialties: [] } ].each do |gap|
+    [ { bio: nil }, { years_experience: nil }, { specialties: [] }, { gender: nil }, { date_of_birth: nil } ].each do |gap|
       complete_profile
       @coach.update!(gap)
 
@@ -201,7 +201,7 @@ class CoachApp::ReviewConcurrencyTest < ActiveSupport::TestCase
 
   setup do
     Storage.reset!
-    @coach = Coach.create!(phone: "+201012345711", password_hash: "x", full_name: "Sara", bio: "Hi", years_experience: 3, specialties: [ "sports" ])
+    @coach = Coach.create!(phone: "+201012345711", password_hash: "x", full_name: "Sara", bio: "Hi", years_experience: 3, specialties: [ "sports" ], gender: "male", date_of_birth: Date.new(1990, 3, 12))
     CoachDocument::REQUIRED_SINGLE.each do |type|
       @coach.coach_documents.create!(type: type, storage_key: "keep/#{type}", mime_type: "image/jpeg", size_bytes: 1)
     end

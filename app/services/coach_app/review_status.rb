@@ -37,7 +37,8 @@ module CoachApp
     end
 
     def self.profile_complete?(coach)
-      coach.bio.present? && !coach.years_experience.nil? && coach.specialties.any?
+      coach.bio.present? && !coach.years_experience.nil? && coach.specialties.any? &&
+        coach.gender.present? && coach.date_of_birth.present?
     end
     private_class_method :profile_complete?
   end

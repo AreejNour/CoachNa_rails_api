@@ -48,6 +48,23 @@
           <input type="email" id="coach_email" name="coach[email]" value="<%= f[:email] %>" maxlength="254" required>
         </div>
         <div class="form-row">
+          <div class="form-pair">
+            <div>
+              <label for="coach_gender">Gender</label>
+              <select id="coach_gender" name="coach[gender]" required>
+                <option value="">Choose</option>
+                <% Coach::GENDERS.each do |g| %>
+                  <option value="<%= g %>" <%= "selected" if f[:gender] == g %>><%= g.humanize %></option>
+                <% end %>
+              </select>
+            </div>
+            <div>
+              <label for="coach_date_of_birth">Date of birth</label>
+              <input type="date" id="coach_date_of_birth" name="coach[date_of_birth]" value="<%= f[:date_of_birth] %>" min="1900-01-01" max="<%= Date.current.iso8601 %>" required>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
           <label for="coach_bio">Bio</label>
           <textarea id="coach_bio" name="coach[bio]" rows="4" maxlength="2000" required><%= f[:bio] %></textarea>
         </div>

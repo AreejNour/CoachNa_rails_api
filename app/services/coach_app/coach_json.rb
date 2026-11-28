@@ -11,6 +11,8 @@ module CoachApp
         bio: coach.bio,
         yearsExperience: coach.years_experience,
         specialties: coach.specialties,
+        gender: coach.gender,
+        dateOfBirth: coach.date_of_birth&.iso8601,
         status: coach.status,
         rejectionReason: coach.rejection_reason,
         phoneVerifiedAt: coach.phone_verified_at&.iso8601(3),

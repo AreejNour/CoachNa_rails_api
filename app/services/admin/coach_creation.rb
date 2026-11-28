@@ -97,6 +97,8 @@ module Admin
         attrs[:years_experience] = years(params[:years_experience])
       end
       check(errors, "Choose at least one specialty.") { attrs[:specialties] = specialties(params[:specialties]) }
+      check(errors, "Gender is required.") { attrs[:gender] = gender(params[:gender]) }
+      check(errors, "Date of birth is required (a real date, 18 or older).") { attrs[:date_of_birth] = date_of_birth(params[:date_of_birth]) }
       check(errors, "Commission must be a number from 0 to 100.") { attrs[:commission_percent] = commission(params[:commission]) }
 
       files = []
@@ -155,6 +157,22 @@ module Admin
       list
     end
     private_class_method :specialties
+
+    def self.gender(value)
+      CoachApp::Input.invalid! unless Coach::GENDERS.include?(value.to_s)
+      value.to_s
+    end
+    private_class_method :gender
+
+    def self.date_of_birth(value)
+      CoachApp::Input.invalid! unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}\z/)
+      date = Date.iso8601(value)
+      CoachApp::Input.invalid! unless Coach.date_of_birth_allowed?(date)
+      date
+    rescue Date::Error
+      CoachApp::Input.invalid!
+    end
+    private_class_method :date_of_birth
 
     def self.commission(value)
       number = Float(value.to_s.strip, exception: false)

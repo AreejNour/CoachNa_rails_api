@@ -82,19 +82,21 @@ module AdminHelper
   # The admin actions available for a coach in its current status, for the shared action menu.
   # Each: { key:, label:, url:, input: nil|:reason|:commission, danger:, confirm: }.
   def coach_actions(coach)
-    act = lambda do |key, label, input, danger: false|
-      { key: key, label: label, url: send("admin_#{key}_coach_path", coach), input: input, danger: danger, confirm: nil }
+    act = lambda do |key, label, input, danger: false, values: nil|
+      { key: key, label: label, url: send("admin_#{key}_coach_path", coach), input: input, danger: danger, confirm: nil, values: values }
     end
+    edit = act.(:edit_details, "Edit gender & date of birth", :gender_dob,
+                values: { gender: coach.gender, date_of_birth: coach.date_of_birth&.iso8601 })
     resend = coach.email.present? ? [ act.(:send_password_email, "Send set-password email", nil) ] : []
     case coach.status
     when "pending_review"
-      [ act.(:approve, "Approve", :commission), act.(:request_changes, "Request changes", :reason), act.(:reject, "Reject", :reason) ]
+      [ act.(:approve, "Approve", :commission), act.(:request_changes, "Request changes", :reason), act.(:reject, "Reject", :reason), edit ]
     when "approved"
-      [ act.(:suspend, "Suspend", :reason), act.(:deactivate, "Deactivate", :reason, danger: true) ] + resend
+      [ act.(:suspend, "Suspend", :reason), act.(:deactivate, "Deactivate", :reason, danger: true), edit ] + resend
     when "suspended"
-      [ act.(:reactivate, "Reactivate", :reason), act.(:deactivate, "Deactivate", :reason, danger: true) ] + resend
+      [ act.(:reactivate, "Reactivate", :reason), act.(:deactivate, "Deactivate", :reason, danger: true), edit ] + resend
     else
-      []
+      [ edit ]
     end
   end
 

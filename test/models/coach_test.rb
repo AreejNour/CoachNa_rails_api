@@ -32,4 +32,50 @@ class CoachTest < ActiveSupport::TestCase
     assert_equal "coach", verification.account_type
     assert_equal "signup", verification.purpose
   end
+
+  test "GENDERS is male and female" do
+    assert_equal %w[male female], Coach::GENDERS
+  end
+
+  test "gender and date of birth are optional" do
+    assert Coach.new(phone: "+201012345601", password_hash: "x", full_name: "A").valid?
+  end
+
+  test "gender must be male or female" do
+    coach = Coach.new(phone: "+201012345602", password_hash: "x", full_name: "A")
+    coach.gender = "other"
+    assert_not coach.valid?
+    coach.gender = "female"
+    assert coach.valid?
+  end
+
+  test "date of birth rules: future, before 1900 and under 18 are refused; turning 18 today is fine" do
+    travel_to Date.new(2026, 11, 28) do
+      coach = Coach.new(phone: "+201012345603", password_hash: "x", full_name: "A")
+      {
+        Date.new(2026, 11, 29) => false, Date.new(1899, 12, 31) => false, Date.new(1900, 1, 1) => true,
+        Date.new(2008, 11, 29) => false, Date.new(2008, 11, 28) => true, Date.new(1990, 3, 12) => true
+      }.each do |date, ok|
+        coach.date_of_birth = date
+        assert_equal ok, coach.valid?, date.to_s
+      end
+    end
+  end
+
+  test "a 29 Feb 2008 birth is 18 from 1 Mar 2026, not before" do
+    coach = Coach.new(phone: "+201012345604", password_hash: "x", full_name: "A", date_of_birth: Date.new(2008, 2, 29))
+    travel_to(Date.new(2026, 2, 28)) { assert_not coach.valid? }
+    travel_to(Date.new(2026, 3, 1)) { assert coach.valid? }
+  end
+
+  test "age around birthdays and 29 Feb" do
+    coach = Coach.new(date_of_birth: Date.new(1990, 3, 12))
+    assert_equal 35, coach.age(Date.new(2026, 3, 11))
+    assert_equal 36, coach.age(Date.new(2026, 3, 12))
+    leap = Coach.new(date_of_birth: Date.new(2000, 2, 29))
+    assert_equal 25, leap.age(Date.new(2026, 2, 28))
+    assert_equal 26, leap.age(Date.new(2026, 3, 1))
+    assert_equal 28, leap.age(Date.new(2028, 2, 29))
+    assert_nil Coach.new.age
+  end
 end
