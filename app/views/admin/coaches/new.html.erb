@@ -1,0 +1,99 @@
+<% f = @form || {} %>
+<div class="crumbs"><%= link_to "Coaches", admin_root_path %> › New</div>
+
+<div class="page-head">
+  <div>
+    <h1>New coach</h1>
+    <div class="sub">Creates an approved coach and emails them a link to choose a password.</div>
+  </div>
+</div>
+
+<% if @errors.present? %>
+  <div class="flash alert" role="alert">
+    <strong>Couldn't create the coach:</strong>
+    <ul style="margin:6px 0 0;padding-left:18px">
+      <% @errors.each do |msg| %><li><%= msg %></li><% end %>
+    </ul>
+  </div>
+<% end %>
+
+<%= form_with url: admin_coaches_path, method: :post, scope: :coach, multipart: true do %>
+  <div class="detail">
+    <div class="card">
+      <div class="card-head"><h2>Profile</h2></div>
+      <div class="card-body" style="padding:16px 18px">
+        <div class="form-row">
+          <label for="coach_full_name">Full name</label>
+          <input type="text" id="coach_full_name" name="coach[full_name]" value="<%= f[:full_name] %>" maxlength="100" required>
+        </div>
+        <div class="form-row">
+          <div class="form-pair">
+            <div>
+              <label for="coach_country">Country</label>
+              <select id="coach_country" name="coach[country]">
+                <% selected = f[:country].presence || "EG" %>
+                <% CoachApp::PhoneNumber.countries.each do |c| %>
+                  <option value="<%= c[:country] %>" <%= "selected" if c[:country] == selected %>><%= c[:country] %> (+<%= c[:callingCode] %>)</option>
+                <% end %>
+              </select>
+            </div>
+            <div>
+              <label for="coach_phone">Phone</label>
+              <input type="text" id="coach_phone" name="coach[phone]" value="<%= f[:phone] %>" inputmode="tel" required>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="coach_email">Email</label>
+          <input type="email" id="coach_email" name="coach[email]" value="<%= f[:email] %>" maxlength="254" required>
+        </div>
+        <div class="form-row">
+          <label for="coach_bio">Bio</label>
+          <textarea id="coach_bio" name="coach[bio]" rows="4" maxlength="2000" required><%= f[:bio] %></textarea>
+        </div>
+        <div class="form-row">
+          <label for="coach_years_experience">Years of experience</label>
+          <input type="number" id="coach_years_experience" name="coach[years_experience]" value="<%= f[:years_experience] %>" min="0" max="80" step="1" required>
+        </div>
+        <div class="form-row">
+          <label>Specialties</label>
+          <% Coach::SPECIALTIES.each do |s| %>
+            <label style="font-weight:500;display:block"><input type="checkbox" name="coach[specialties][]" value="<%= s %>" <%= "checked" if Array(f[:specialties]).include?(s) %>> <%= s.humanize %></label>
+          <% end %>
+        </div>
+        <div class="form-row">
+          <label for="coach_commission">Commission (%)</label>
+          <input type="text" id="coach_commission" name="coach[commission]" value="<%= f[:commission] %>" inputmode="decimal" required>
+          <small class="muted">0 to 100. The share CoachNa keeps.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Documents</h2></div>
+      <div class="card-body" style="padding:16px 18px">
+        <div class="form-row">
+          <label for="coach_profile_photo">Profile photo</label>
+          <input type="file" id="coach_profile_photo" name="coach[profile_photo]" accept="image/jpeg,image/png" required>
+        </div>
+        <div class="form-row">
+          <label for="coach_national_id_front">National ID, front</label>
+          <input type="file" id="coach_national_id_front" name="coach[national_id_front]" accept="image/jpeg,image/png" required>
+        </div>
+        <div class="form-row">
+          <label for="coach_national_id_back">National ID, back</label>
+          <input type="file" id="coach_national_id_back" name="coach[national_id_back]" accept="image/jpeg,image/png" required>
+        </div>
+        <div class="form-row">
+          <label for="coach_certificates">Certificates (optional, up to <%= CoachDocument::MAX_CERTIFICATES %>)</label>
+          <input type="file" id="coach_certificates" name="coach[certificates][]" accept="image/jpeg,image/png,application/pdf" multiple>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px">
+    <button type="submit" class="btn primary">Create coach</button>
+    <%= link_to "Cancel", admin_root_path, class: "btn" %>
+  </div>
+<% end %>

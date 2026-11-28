@@ -411,4 +411,111 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to "/admin"
     assert flash[:alert].present?
   end
+
+  # ── new / create ────────────────────────────────────────────────────────────
+
+  def upload(bytes, type, name)
+    Rack::Test::UploadedFile.new(StringIO.new(bytes), type, true, original_filename: name)
+  end
+
+  def new_coach_params(overrides = {})
+    png = "\x89PNG\r\n\x1A\n".b
+    {
+      full_name: "Mona Coach", phone: "1001234567", country: "EG", email: "mona@example.com",
+      bio: "Ten years.", years_experience: "5", specialties: [ "weight_loss" ],
+      profile_photo: upload(png, "image/png", "me.png"),
+      national_id_front: upload(png, "image/png", "f.png"),
+      national_id_back: upload(png, "image/png", "b.png"),
+      commission: "20"
+    }.merge(overrides)
+  end
+
+  test "index has a New coach link" do
+    sign_in
+    get "/admin"
+    assert_select "a[href='/admin/coaches/new']", text: /New coach/
+  end
+
+  test "new renders the form" do
+    sign_in
+    get "/admin/coaches/new"
+    assert_response :ok
+    assert_select "form[enctype='multipart/form-data']"
+    assert_select "input[name='coach[full_name]']"
+    assert_select "input[name='coach[specialties][]']"
+  end
+
+  test "new requires an admin" do
+    get "/admin/coaches/new"
+    assert_response :redirect
+  end
+
+  test "create with valid params redirects to the coach with a flash" do
+    sign_in
+    CoachApp::QueuePublisher.adapter = CoachApp::QueuePublisher::TestAdapter.new
+    post "/admin/coaches", params: { coach: new_coach_params }
+
+    coach = Coach.find_by!(email: "mona@example.com")
+    assert_redirected_to "/admin/coaches/#{coach.id}"
+    assert_equal "Coach created and approved. Setup email sent.", flash[:notice]
+  ensure
+    CoachApp::QueuePublisher.adapter = nil
+  end
+
+  test "create with invalid params re-renders with errors and kept values" do
+    sign_in
+    post "/admin/coaches", params: { coach: new_coach_params(national_id_back: nil, full_name: "Keep Me") }
+
+    assert_response :unprocessable_entity
+    assert_includes @response.body, "Keep Me"
+    assert_includes @response.body, "mona@example.com"
+    assert_includes @response.body, "Choose the files again."
+    assert_includes @response.body, "National id back"
+    assert_equal 0, Coach.count
+  end
+
+  test "send_password_email queues the email and honours return_to" do
+    CoachApp::QueuePublisher.adapter = CoachApp::QueuePublisher::TestAdapter.new
+    sign_in
+    coach = make_coach("Amy", "approved", "+201000000099")
+    coach.update!(email: "amy@example.com")
+    post "/admin/coaches/#{coach.id}/send-password-email", params: { return_to: "/admin?status=approved" }
+    assert_redirected_to "/admin?status=approved"
+    assert_equal "Set-password email sent.", flash[:notice]
+    payload = OutboxMessage.where(kind: "email").sole.payload
+    assert_equal "coach_account_created", payload["template"]
+    assert payload["data"]["link"].present?
+  ensure
+    CoachApp::QueuePublisher.adapter = nil
+  end
+
+  test "send_password_email for a coach without email only alerts" do
+    sign_in
+    coach = make_coach("Amy", "approved", "+201000000098")
+    post "/admin/coaches/#{coach.id}/send-password-email"
+    assert_redirected_to "/admin/coaches/#{coach.id}"
+    assert flash[:alert].present?
+    assert_equal 0, OutboxMessage.where(kind: "email").count
+  end
+
+  test "send_password_email requires an admin" do
+    coach = make_coach("Amy", "approved", "+201000000097")
+    post "/admin/coaches/#{coach.id}/send-password-email"
+    assert_redirected_to "/admin/login"
+  end
+
+  test "create ignores a non-hash coach param" do
+    sign_in
+    post "/admin/coaches", params: { coach: "foo" }
+    assert_response :unprocessable_entity
+  end
+
+  test "send_password_email for a rejected coach with email only alerts" do
+    sign_in
+    coach = make_coach("Rita", "rejected", "+201000000096")
+    coach.update!(email: "rita@example.com")
+    post "/admin/coaches/#{coach.id}/send-password-email"
+    assert flash[:alert].present?
+    assert_equal 0, OutboxMessage.where(kind: "email").count
+  end
 end

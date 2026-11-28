@@ -3,6 +3,7 @@
     <h1>Coaches</h1>
     <div class="sub"><%= pluralize(@coaches.size, "coach").sub("coachs", "coaches") %><%= " · #{@status.humanize}" if @status %></div>
   </div>
+  <%= link_to "New coach", admin_new_coach_path, class: "btn primary" %>
 </div>
 
 <div class="card table-card">

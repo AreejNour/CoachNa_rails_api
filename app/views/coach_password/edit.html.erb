@@ -1,0 +1,13 @@
+<h1>Choose your password</h1>
+<p class="ar">اختر كلمة المرور الخاصة بك</p>
+<% if @error_en %>
+  <div class="error" role="alert"><%= @error_en %><p class="ar"><%= @error_ar %></p></div>
+<% end %>
+<%= form_with url: coach_password_path(params[:token]), method: :post, local: true do %>
+  <label for="password">Password <span>/ كلمة المرور</span></label>
+  <input type="password" id="password" name="password" minlength="8" autocomplete="new-password" required autofocus>
+  <label for="password_confirmation">Confirm password <span>/ تأكيد كلمة المرور</span></label>
+  <input type="password" id="password_confirmation" name="password_confirmation" minlength="8" autocomplete="new-password" required>
+  <p class="hint">At least 8 characters. / ٨ أحرف على الأقل.</p>
+  <button type="submit">Save password / حفظ</button>
+<% end %>

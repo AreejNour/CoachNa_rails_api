@@ -85,13 +85,14 @@ module AdminHelper
     act = lambda do |key, label, input, danger: false|
       { key: key, label: label, url: send("admin_#{key}_coach_path", coach), input: input, danger: danger, confirm: nil }
     end
+    resend = coach.email.present? ? [ act.(:send_password_email, "Send set-password email", nil) ] : []
     case coach.status
     when "pending_review"
       [ act.(:approve, "Approve", :commission), act.(:request_changes, "Request changes", :reason), act.(:reject, "Reject", :reason) ]
     when "approved"
-      [ act.(:suspend, "Suspend", :reason), act.(:deactivate, "Deactivate", :reason, danger: true) ]
+      [ act.(:suspend, "Suspend", :reason), act.(:deactivate, "Deactivate", :reason, danger: true) ] + resend
     when "suspended"
-      [ act.(:reactivate, "Reactivate", :reason), act.(:deactivate, "Deactivate", :reason, danger: true) ]
+      [ act.(:reactivate, "Reactivate", :reason), act.(:deactivate, "Deactivate", :reason, danger: true) ] + resend
     else
       []
     end

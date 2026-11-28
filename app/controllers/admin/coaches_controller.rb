@@ -19,6 +19,20 @@ module Admin
       @coaches = scope.order(Arel.sql("profile_submitted_at DESC NULLS LAST, created_at DESC"))
     end
 
+    def new
+      @form = {}
+    end
+
+    def create
+      attrs = params[:coach].is_a?(ActionController::Parameters) ? params[:coach] : ActionController::Parameters.new
+      @coach = Admin::CoachCreation.call(admin: current_admin, params: attrs)
+      redirect_to admin_coach_path(@coach), notice: "Coach created and approved. Setup email sent."
+    rescue Admin::CoachCreation::Invalid => e
+      @errors = e.errors + [ "Choose the files again." ]
+      @form = attrs.respond_to?(:permit) ? attrs.permit(:full_name, :phone, :country, :email, :bio, :years_experience, :commission, specialties: []).to_h : {}
+      render :new, status: :unprocessable_entity
+    end
+
     def show
       @coach = Coach.find(params[:id])
       @documents = @coach.coach_documents.order(:type)
@@ -76,6 +90,17 @@ module Admin
     def deactivate
       coach = Coach.find(params[:id])
       decision(coach, "Coach deactivated.") { Admin::CoachDecision.deactivate!(coach: coach, admin: current_admin, reason: params[:reason]) }
+    end
+
+    def send_password_email
+      coach = Coach.find(params[:id])
+      if coach.email.blank? || !%w[approved suspended].include?(coach.status)
+        flash[:alert] = "This coach cannot receive a set-password email."
+      else
+        Admin::CoachPasswordSetup.send_email!(coach)
+        flash[:notice] = "Set-password email sent."
+      end
+      redirect_to(safe_admin_return_to(params[:return_to]) || admin_coach_path(coach))
     end
 
     private

@@ -43,6 +43,8 @@ module CoachNaRailsApi
 
     require_relative "../lib/middleware/bad_request_envelope"
     config.middleware.use BadRequestEnvelope
+    require_relative "../lib/middleware/token_redacting_logger"
+    config.middleware.swap Rails::Rack::Logger, TokenRedactingLogger
 
     # The admin panel (module `admin`) is a server-rendered browser app, so add back the
     # cookies/session/flash middleware the api_only stack drops. The mobile coach API stays
