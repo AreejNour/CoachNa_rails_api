@@ -32,11 +32,11 @@
         <h3><%= action[:label] %></h3>
         <div class="form-row">
           <% if action[:input] == :commission %>
-            <%= label_tag nil, "Commission (%)" %>
-            <%= number_field_tag :commission, nil, id: nil, step: "any", min: 0, max: 100, required: true %>
+            <%= label_tag "action-#{record_id}-#{action[:key]}-field", "Commission (%)" %>
+            <%= number_field_tag :commission, nil, id: "action-#{record_id}-#{action[:key]}-field", step: "any", min: 0, max: 100, required: true %>
           <% else %>
-            <%= label_tag nil, "Reason" %>
-            <%= text_area_tag :reason, nil, id: nil, required: true, rows: 4 %>
+            <%= label_tag "action-#{record_id}-#{action[:key]}-field", "Reason" %>
+            <%= text_area_tag :reason, nil, id: "action-#{record_id}-#{action[:key]}-field", required: true, rows: 4 %>
           <% end %>
         </div>
         <% if action[:danger] %><p class="muted">This cannot be undone.</p><% end %>

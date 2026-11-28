@@ -8,6 +8,8 @@
       <% if @coach.profile_submitted_at %>· submitted <%= @coach.profile_submitted_at.strftime("%b %d, %Y") %><% end %>
     </div>
   </div>
+  <%= render "admin/shared/action_menu", actions: coach_actions(@coach), record_id: @coach.id,
+        return_to: request.fullpath, trigger: :button %>
 </div>
 
 <div class="filters" style="margin-bottom:18px">
