@@ -21,7 +21,7 @@
   <% else %>
     <table>
       <thead>
-        <tr><th>Code</th><th>Discount</th><th>Dates</th><th class="right">Uses (paid) / limit</th><th>Status</th><th>Created by</th></tr>
+        <tr><th>Code</th><th>Discount</th><th>Dates</th><th class="right">Uses (paid) / limit</th><th class="right">Per patient</th><th>Status</th><th>Created by</th></tr>
       </thead>
       <tbody>
         <% @codes.each do |code| %>
@@ -30,6 +30,7 @@
             <td><%= promo_discount_label(code) %></td>
             <td><small><%= promo_dates(code) %></small></td>
             <td class="right amount"><%= @uses[code.id].to_i %> / <%= code.max_uses || "∞" %></td>
+            <td class="right amount"><%= code.max_uses_per_client || "∞" %></td>
             <td><%= promo_status_pill(code) %></td>
             <td><%= code.created_by_admin&.name || "—" %></td>
           </tr>

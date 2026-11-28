@@ -55,6 +55,11 @@
           <input type="number" id="promo_code_max_uses" name="promo_code[max_uses]" value="<%= f[:max_uses] %>" min="1" step="1">
         </div>
         <div class="form-row">
+          <label for="promo_code_max_uses_per_client">Uses per patient</label>
+          <input type="number" id="promo_code_max_uses_per_client" name="promo_code[max_uses_per_client]" value="<%= f[:max_uses_per_client] %>" min="1" step="1">
+          <small class="muted">Empty means no limit. 1 = once per patient.</small>
+        </div>
+        <div class="form-row">
           <input type="hidden" name="promo_code[active]" value="0">
           <label><input type="checkbox" name="promo_code[active]" value="1" <%= "checked" if f[:active] == "1" || f[:active] == true %>> Active</label>
         </div>
@@ -78,7 +83,7 @@
           <select id="promo_code_restrict_package_id" name="promo_code[restrict_package_id]">
             <option value="">Any package</option>
             <% @packages.each do |pkg| %>
-              <option value="<%= pkg.id %>" <%= "selected" if f[:restrict_package_id].to_s == pkg.id %>>
+              <option value="<%= pkg.id %>" data-coach-id="<%= pkg.coach_id %>" <%= "selected" if f[:restrict_package_id].to_s == pkg.id %>>
                 <%= pkg.coach.full_name %> — <%= pkg.name %> (<%= egp(pkg.price_piastres) %>, <%= pkg.duration_days %> days)<%= " (inactive)" unless pkg.is_active %>
               </option>
             <% end %>
@@ -133,3 +138,21 @@
     <%= link_to "Cancel", @code.persisted? ? admin_promo_code_path(@code) : admin_promo_codes_path, class: "btn" %>
   </div>
 <% end %>
+
+<script>
+  // Only offer the chosen coach's packages. Runs on load too, so a re-rendered form keeps the filter.
+  (function () {
+    var coach = document.getElementById("promo_code_restrict_coach_id");
+    var pkg = document.getElementById("promo_code_restrict_package_id");
+    function filterPackages() {
+      Array.prototype.forEach.call(pkg.options, function (opt) {
+        var hide = coach.value !== "" && opt.value !== "" && opt.dataset.coachId !== coach.value;
+        opt.hidden = hide;
+        opt.disabled = hide;
+      });
+      if (pkg.selectedOptions[0] && pkg.selectedOptions[0].hidden) pkg.value = "";
+    }
+    coach.addEventListener("change", filterPackages);
+    filterPackages();
+  })();
+</script>
