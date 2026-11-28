@@ -61,6 +61,8 @@ Rails.application.routes.draw do
     post "login", to: "sessions#create"
     delete "logout", to: "sessions#destroy", as: :logout
     get "", to: "coaches#index", as: :root
+    get "coaches/new", to: "coaches#new", as: :new_coach
+    post "coaches", to: "coaches#create", as: :coaches
     get "coaches/:id", to: "coaches#show", as: :coach
     get "coaches/:id/documents/:document_id", to: "coaches#document", as: :coach_document
     post "coaches/:id/approve", to: "coaches#approve", as: :approve_coach
