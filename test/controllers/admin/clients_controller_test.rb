@@ -163,36 +163,52 @@ class Admin::ClientsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "active", client.reload.status
   end
 
-  test "show for active client shows Suspend and Deactivate but not Reactivate" do
+  test "show for active client has a page menu with Suspend and Deactivate and no Admin actions card" do
     sign_in
     client = make_client("Active Ann", "active", "+201000000301")
     get admin_client_path(client)
-    assert_includes @response.body, "Suspend"
-    assert_includes @response.body, "Deactivate"
+    assert_response :ok
+    assert_select ".page-head .action-menu button.action-item", text: "Suspend"
+    assert_select ".page-head .action-menu button.action-item", text: "Deactivate"
+    assert_select ".page-head .action-menu form[action=?][onsubmit*=confirm]", admin_deactivate_client_path(client)
+    assert_includes @response.body, "This cannot be undone."
+    assert_select "h2", text: "Admin actions", count: 0
     assert_not_includes @response.body, "Reactivate"
   end
 
-  test "show for suspended client shows Reactivate and Deactivate" do
+  test "show for suspended client menu offers Reactivate and Deactivate" do
     sign_in
     client = make_client("Suspended Sue", "suspended", "+201000000302")
     get admin_client_path(client)
-    assert_includes @response.body, "Reactivate"
-    assert_includes @response.body, "Deactivate"
+    assert_select ".page-head .action-menu button.action-item", text: "Reactivate"
+    assert_select ".page-head .action-menu button.action-item", text: "Deactivate"
   end
 
-  test "show for deactivated client shows no actions available" do
+  test "show for deactivated client menu says no actions" do
     sign_in
     client = make_client("Deactivated Dan", "deactivated", "+201000000303")
     get admin_client_path(client)
-    assert_includes @response.body, "No actions available"
+    assert_select ".page-head .action-menu", text: /No actions for this status/
   end
 
-  test "deactivate form carries the onsubmit confirm guard" do
+  test "index rows get menus for active and suspended clients, none for deactivated" do
     sign_in
-    client = make_client("Active Ann", "active", "+201000000301")
-    get admin_client_path(client)
-    assert_match(/onsubmit=.*confirm\(/, @response.body)
+    a = make_client("Active Ann", "active", "+201000000311")
+    s = make_client("Suspended Sue", "suspended", "+201000000312")
+    make_client("Deactivated Dan", "deactivated", "+201000000313")
+    get admin_clients_path(q: "a")
+    assert_response :ok
+    assert_includes request.fullpath, "q=a"
+    assert_select "form[action=?] input[name=return_to][value=?]", admin_suspend_client_path(a), request.fullpath
+    get admin_clients_path
+    assert_select "tbody tr .action-menu", count: 2
+    assert_select "form[action=?] input[name=return_to][value=?]", admin_suspend_client_path(a), request.fullpath
+    assert_select "form[action=?]", admin_reactivate_client_path(s)
+    assert_select "tr", text: /Deactivated Dan/ do
+      assert_select ".action-menu", count: 0
+    end
   end
+
   test "show hides checkout_open and replaced subscriptions" do
     sign_in
     client = make_client("Busy Bea", "active", "+201000000351")

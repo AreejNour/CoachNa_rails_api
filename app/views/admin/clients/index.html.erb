@@ -28,7 +28,7 @@
   <% else %>
     <table>
       <thead>
-        <tr><th>Name</th><th>Status</th><th>Phone</th><th>Email</th><th>Joined</th></tr>
+        <tr><th>Name</th><th>Status</th><th>Phone</th><th>Email</th><th>Joined</th><th></th></tr>
       </thead>
       <tbody>
         <% @clients.each do |client| %>
@@ -38,6 +38,8 @@
             <td><%= client.phone %></td>
             <td><%= client.email.presence || "—" %></td>
             <td><small><%= client.created_at&.strftime("%b %d, %Y") %></small></td>
+            <td class="row-actions"><%= render "admin/shared/action_menu", actions: client_actions(client), record_id: client.id,
+                  return_to: request.fullpath, trigger: :dots %></td>
           </tr>
         <% end %>
       </tbody>

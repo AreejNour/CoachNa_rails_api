@@ -8,6 +8,8 @@
       · joined <%= @client.created_at.strftime("%b %d, %Y") %>
     </div>
   </div>
+  <%= render "admin/shared/action_menu", actions: client_actions(@client), record_id: @client.id,
+        return_to: request.fullpath, trigger: :button %>
 </div>
 
 <div class="detail">
@@ -63,10 +65,5 @@
         </table>
       <% end %>
     </div>
-  </div>
-
-  <div class="card">
-    <div class="card-head"><h2>Admin actions</h2></div>
-    <%= render "actions" %>
   </div>
 </div>
