@@ -176,6 +176,13 @@ class Admin::ClientsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes @response.body, "Reactivate"
   end
 
+  test "show page uses a single-column detail layout" do
+    sign_in
+    c = make_client("Solo Sol", "active", "+201000000361")
+    get admin_client_path(c)
+    assert_select ".detail.single"
+  end
+
   test "show for suspended client menu offers Reactivate and Deactivate" do
     sign_in
     client = make_client("Suspended Sue", "suspended", "+201000000302")
@@ -202,6 +209,9 @@ class Admin::ClientsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?] input[name=return_to][value=?]", admin_suspend_client_path(a), request.fullpath
     get admin_clients_path
     assert_select "tbody tr .action-menu", count: 2
+    assert_select ".card.table-card"
+    assert_select "tbody tr .action-dots[aria-label=?]", "Actions for Active Ann"
+    assert_select "tbody tr .action-dots[aria-label=?]", "Actions for Suspended Sue"
     assert_select "form[action=?] input[name=return_to][value=?]", admin_suspend_client_path(a), request.fullpath
     assert_select "form[action=?]", admin_reactivate_client_path(s)
     assert_select "tr", text: /Deactivated Dan/ do

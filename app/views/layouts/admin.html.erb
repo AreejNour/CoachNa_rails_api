@@ -120,6 +120,7 @@
 
     /* ---- definition rows ---- */
     .detail{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;align-items:start}
+    .detail.single{grid-template-columns:1fr}
     .field{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-bottom:1px solid var(--line)}
     .field:last-child{border-bottom:none}
     .field .k{color:var(--muted)}
@@ -174,6 +175,11 @@
     .action-empty{padding:8px 12px;margin:0}
     .action-dialog{border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
          padding:20px;width:min(440px,92vw);background:var(--card);color:var(--ink)}
+    .table-card{overflow:visible}
+    .table-card thead th:first-child{border-top-left-radius:var(--radius)}
+    .table-card thead th:last-child{border-top-right-radius:var(--radius)}
+    tbody tr:nth-last-child(-n+2) .action-panel{top:auto;bottom:calc(100% + 4px)}
+    .action-dialog{text-align:left}
     .action-dialog::backdrop{background:rgba(16,24,40,.45)}
     .action-dialog h3{margin:0 0 12px}
     .dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
@@ -237,6 +243,19 @@
         if (!m.contains(e.target)) m.open = false;
       });
     });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      var m = document.querySelector("details.action-menu[open]");
+      if (m) { m.open = false; var s = m.querySelector("summary"); if (s) s.focus(); }
+    });
+    // close events do not bubble; capture them to return focus to the menu trigger
+    document.addEventListener("close", function (e) {
+      var d = e.target;
+      if (!d.matches || !d.matches("dialog.action-dialog")) return;
+      var m = document.getElementById(d.getAttribute("data-menu"));
+      var s = m && m.querySelector("summary");
+      if (s) s.focus();
+    }, true);
   </script>
 </body>
 </html>

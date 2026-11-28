@@ -5,7 +5,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card table-card">
   <div class="card-head" style="flex-wrap:wrap;gap:10px">
     <div class="filters">
       <%= link_to "All", admin_root_path(q: @query.presence), class: "pill #{'active' unless @status}" %>
@@ -39,7 +39,8 @@
             <td><%= Array(coach.specialties).join(", ") %></td>
             <td><small><%= coach.profile_submitted_at&.strftime("%b %d, %Y · %H:%M") || "—" %></small></td>
             <td class="row-actions"><%= render "admin/shared/action_menu", actions: coach_actions(coach), record_id: coach.id,
-                  return_to: request.fullpath, trigger: :dots %></td>
+                  return_to: request.fullpath, trigger: :dots,
+                  label: "Actions for #{coach.full_name}" %></td>
           </tr>
         <% end %>
       </tbody>

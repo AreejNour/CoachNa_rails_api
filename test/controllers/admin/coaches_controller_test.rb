@@ -280,6 +280,14 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     assert_select "textarea#action-#{coach.id}-reject-field"
   end
 
+  test "show page uses a single-column detail layout" do
+    sign_in
+    c = make_coach("Solo Sam", "approved", "+201000000047")
+    get admin_coach_path(c)
+    assert_response :ok
+    assert_select ".detail.single"
+  end
+
   test "index rows each get their own menu with the full path as return_to" do
     sign_in
     a = make_coach("Approved Amy", "approved", "+201000000044")
@@ -288,6 +296,11 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     get admin_root_path(status: "approved", q: "Approved")
     assert_response :ok
     assert_select "tbody tr .action-menu", count: 2
+    assert_select ".card.table-card"
+    assert_select "tbody tr .action-dots[aria-label=?]", "Actions for Approved Amy"
+    assert_select "tbody tr .action-dots[aria-label=?]", "Actions for Approved Bob"
+    assert_select "dialog#action-#{a.id}-suspend[aria-labelledby=?]", "action-#{a.id}-suspend-title"
+    assert_select "h3#action-#{a.id}-suspend-title"
     assert_select "dialog#action-#{a.id}-suspend"
     assert_select "dialog#action-#{b.id}-suspend"
     assert_select "dialog#action-#{a.id}-suspend input[name=return_to][value=?]", request.fullpath

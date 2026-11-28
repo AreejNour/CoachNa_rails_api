@@ -1,9 +1,9 @@
-<%# Locals: actions (coach_actions / client_actions), record_id, return_to, trigger (:button | :dots) %>
+<%# Locals: actions (coach_actions / client_actions), record_id, return_to, trigger (:button | :dots), label (optional aria-label for :dots) %>
 <% if actions.empty? && trigger == :dots %>
 <% else %>
-  <details class="action-menu">
+  <details class="action-menu" id="action-menu-<%= record_id %>">
     <% if trigger == :dots %>
-      <summary class="btn action-dots" aria-label="Actions">⋯</summary>
+      <summary class="btn action-dots" aria-label="<%= local_assigns[:label] || "Actions" %>">⋯</summary>
     <% else %>
       <summary class="btn"><%= actions.empty? ? "Actions" : "Actions ▾" %></summary>
     <% end %>
@@ -27,9 +27,10 @@
   </details>
 
   <% actions.select { |a| a[:input] }.each do |action| %>
-    <dialog id="action-<%= record_id %>-<%= action[:key] %>" class="action-dialog">
+    <dialog id="action-<%= record_id %>-<%= action[:key] %>" class="action-dialog" aria-labelledby="action-<%= record_id %>-<%= action[:key] %>-title"
+            data-menu="action-menu-<%= record_id %>">
       <%= form_with url: action[:url], method: :post do |f| %>
-        <h3><%= action[:label] %></h3>
+        <h3 id="action-<%= record_id %>-<%= action[:key] %>-title"><%= action[:label] %></h3>
         <div class="form-row">
           <% if action[:input] == :commission %>
             <%= label_tag "action-#{record_id}-#{action[:key]}-field", "Commission (%)" %>
