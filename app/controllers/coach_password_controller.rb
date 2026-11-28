@@ -14,20 +14,29 @@ class CoachPasswordController < ActionController::Base
     @coach = Admin::CoachPasswordSetup.verify(params[:token])
     return render_expired unless @coach
 
-    password = params[:password].to_s
+    password = params[:password]
+    confirmation = params[:password_confirmation]
+    unless password.is_a?(String) && confirmation.is_a?(String)
+      return form_error("Enter and confirm your password.", "أدخل كلمة المرور وأكّدها.")
+    end
+    if password.include?("\0")
+      return form_error("Password contains an invalid character.", "كلمة المرور تحتوي على رمز غير صالح.")
+    end
     if password.length < CoachApp::Input::PASSWORD_MIN
       return form_error("Password must be at least #{CoachApp::Input::PASSWORD_MIN} characters.",
                         "يجب ألا تقل كلمة المرور عن #{CoachApp::Input::PASSWORD_MIN} أحرف.")
     end
-    unless password == params[:password_confirmation].to_s
+    unless password == confirmation
       return form_error("Passwords do not match.", "كلمتا المرور غير متطابقتين.")
     end
 
-    if Admin::CoachPasswordSetup.set_password!(params[:token], password, params[:password_confirmation].to_s)
+    if Admin::CoachPasswordSetup.set_password!(params[:token], password, confirmation)
       render :done
     else
       render_expired
     end
+  rescue ApiError
+    form_error("Password is invalid.", "كلمة المرور غير صالحة.")
   end
 
   private

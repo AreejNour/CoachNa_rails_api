@@ -27,6 +27,12 @@ module CoachApp
       nil
     end
 
+    # Ends every session of a coach (used when their password changes).
+    def self.revoke_all(coach_id)
+      CoachRefreshToken.where(coach_id: coach_id).delete_all
+      nil
+    end
+
     def self.digest(token)
       Digest::SHA256.hexdigest(token)
     end

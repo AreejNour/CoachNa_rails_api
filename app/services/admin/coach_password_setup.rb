@@ -19,7 +19,7 @@ module Admin
       return nil unless id.is_a?(String) && print.is_a?(String)
 
       coach = Coach.find_by(id: id)
-      coach if coach && matches?(coach, print)
+      coach if coach && usable?(coach, print)
     end
 
     # Sets the password once: the row is locked and the token re-checked, so two submits of one
@@ -33,9 +33,10 @@ module Admin
 
       Coach.transaction do
         coach = Coach.lock.find_by(id: id)
-        next nil unless coach && matches?(coach, print)
+        next nil unless coach && usable?(coach, print)
 
         coach.update!(password_hash: CoachApp::Password.digest(password))
+        CoachApp::RefreshTokens.revoke_all(coach.id)
         coach
       end
     end
@@ -49,6 +50,11 @@ module Admin
         kind: "email", payload: { to: coach.email, template: "coach_account_created", data: data }
       )
     end
+
+    def self.usable?(coach, print)
+      %w[approved suspended].include?(coach.status) && matches?(coach, print)
+    end
+    private_class_method :usable?
 
     def self.matches?(coach, print)
       ActiveSupport::SecurityUtils.secure_compare(fingerprint(coach.password_hash), print)

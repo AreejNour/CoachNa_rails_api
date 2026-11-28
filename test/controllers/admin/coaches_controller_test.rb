@@ -509,4 +509,13 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     post "/admin/coaches", params: { coach: "foo" }
     assert_response :unprocessable_entity
   end
+
+  test "send_password_email for a rejected coach with email only alerts" do
+    sign_in
+    coach = make_coach("Rita", "rejected", "+201000000096")
+    coach.update!(email: "rita@example.com")
+    post "/admin/coaches/#{coach.id}/send-password-email"
+    assert flash[:alert].present?
+    assert_equal 0, OutboxMessage.where(kind: "email").count
+  end
 end
