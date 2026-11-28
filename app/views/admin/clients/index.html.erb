@@ -5,7 +5,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card table-card">
   <div class="card-head" style="flex-wrap:wrap;gap:10px">
     <div class="filters">
       <%= link_to "All", admin_clients_path(q: @query.presence), class: "pill #{'active' unless @status}" %>
@@ -28,7 +28,7 @@
   <% else %>
     <table>
       <thead>
-        <tr><th>Name</th><th>Status</th><th>Phone</th><th>Email</th><th>Joined</th></tr>
+        <tr><th>Name</th><th>Status</th><th>Phone</th><th>Email</th><th>Joined</th><th></th></tr>
       </thead>
       <tbody>
         <% @clients.each do |client| %>
@@ -38,6 +38,9 @@
             <td><%= client.phone %></td>
             <td><%= client.email.presence || "—" %></td>
             <td><small><%= client.created_at&.strftime("%b %d, %Y") %></small></td>
+            <td class="row-actions"><%= render "admin/shared/action_menu", actions: client_actions(client), record_id: client.id,
+                  return_to: request.fullpath, trigger: :dots,
+                  label: "Actions for #{client.full_name}" %></td>
           </tr>
         <% end %>
       </tbody>

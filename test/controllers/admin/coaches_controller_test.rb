@@ -235,48 +235,82 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
   # View: decision panel shows correct controls per status
   # ---------------------------------------------------------------------------
 
-  test "show for pending_review coach displays Approve, Request changes, Reject but not Suspend" do
+  test "show for pending_review coach has a page menu with dialogs and no Admin actions card" do
     sign_in
     coach = make_coach("Pending Pat", "pending_review", "+201000000040")
     get admin_coach_path(coach)
     assert_response :ok
-    assert_includes @response.body, "Approve"
-    assert_includes @response.body, "Request changes"
-    assert_includes @response.body, "Reject"
-    assert_not_includes @response.body, "Suspend"
+    assert_select ".page-head .action-menu" do
+      assert_select "button.action-item", text: "Approve"
+      assert_select "button.action-item", text: "Request changes"
+      assert_select "button.action-item", text: "Reject"
+    end
+    assert_select "dialog#action-#{coach.id}-approve input[name=commission]"
+    assert_select "dialog#action-#{coach.id}-reject textarea[name=reason]"
+    assert_select "h2", text: "Admin actions", count: 0
     assert_not_includes @response.body, "Reactivate"
   end
 
-  test "show for approved coach displays Suspend and Deactivate but not Approve" do
+  test "show for approved coach menu offers Suspend and Deactivate but not Approve" do
     sign_in
     coach = make_coach("Active Coach", "approved", "+201000000041")
     get admin_coach_path(coach)
     assert_response :ok
-    assert_includes @response.body, "Suspend"
-    assert_includes @response.body, "Deactivate"
-    # No Approve action form (the "Approved" status pill also contains "Approve", so match the URL).
+    assert_select ".page-head .action-menu button.action-item", text: "Suspend"
+    assert_select ".page-head .action-menu button.action-item", text: "Deactivate"
+    assert_select "dialog#action-#{coach.id}-deactivate", text: /This cannot be undone/
     assert_not_includes @response.body, admin_approve_coach_path(coach)
     assert_not_includes @response.body, "Reactivate"
   end
 
-  # ---------------------------------------------------------------------------
-  # I1: terminal-action confirm guard (onsubmit= with confirm()
-  # ---------------------------------------------------------------------------
-
-  test "show for pending_review coach reject form carries onsubmit confirm guard" do
+  test "show for rejected coach menu says no actions" do
     sign_in
-    coach = make_coach("Pending Pat", "pending_review", "+201000000050")
+    coach = make_coach("Rejected Ray", "rejected", "+201000000042")
     get admin_coach_path(coach)
-    assert_response :ok
-    assert_match(/onsubmit=.*confirm\(/, @response.body)
+    assert_select ".page-head .action-menu", text: /No actions for this status/
   end
 
-  test "show for approved coach deactivate form carries onsubmit confirm guard" do
+  test "dialog fields have labels associated with inputs" do
     sign_in
-    coach = make_coach("Active Coach", "approved", "+201000000051")
+    coach = make_coach("Pending Pat", "pending_review", "+201000000043")
     get admin_coach_path(coach)
+    assert_select "label[for=action-#{coach.id}-approve-field]"
+    assert_select "input#action-#{coach.id}-approve-field"
+    assert_select "label[for=action-#{coach.id}-reject-field]"
+    assert_select "textarea#action-#{coach.id}-reject-field"
+  end
+
+  test "show page uses a single-column detail layout" do
+    sign_in
+    c = make_coach("Solo Sam", "approved", "+201000000047")
+    get admin_coach_path(c)
     assert_response :ok
-    assert_match(/onsubmit=.*confirm\(/, @response.body)
+    assert_select ".detail.single"
+  end
+
+  test "index rows each get their own menu with the full path as return_to" do
+    sign_in
+    a = make_coach("Approved Amy", "approved", "+201000000044")
+    b = make_coach("Approved Bob", "approved", "+201000000045")
+    r = make_coach("Rejected Ray", "rejected", "+201000000046")
+    get admin_root_path(status: "approved", q: "Approved")
+    assert_response :ok
+    assert_select "tbody tr .action-menu", count: 2
+    assert_select ".card.table-card"
+    assert_select "tbody tr .action-dots[aria-label=?]", "Actions for Approved Amy"
+    assert_select "tbody tr .action-dots[aria-label=?]", "Actions for Approved Bob"
+    assert_select "dialog#action-#{a.id}-suspend[aria-labelledby=?]", "action-#{a.id}-suspend-title"
+    assert_select "h3#action-#{a.id}-suspend-title"
+    assert_select "dialog#action-#{a.id}-suspend"
+    assert_select "dialog#action-#{b.id}-suspend"
+    assert_select "dialog#action-#{a.id}-suspend input[name=return_to][value=?]", request.fullpath
+    assert_includes request.fullpath, "status=approved"
+    assert_includes request.fullpath, "q=Approved"
+
+    get admin_root_path
+    assert_select "tr", text: /Rejected Ray/ do
+      assert_select ".action-menu", count: 0
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -351,5 +385,30 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     sub(coach, make_client("Live Lara"), status: "active")
     get admin_coach_path(coach, tab: "clients", page: "999")
     assert_response :ok
+  end
+
+  test "action follows a safe return_to" do
+    sign_in
+    coach = make_coach("Amy", "approved", "+201000000091")
+    post admin_suspend_coach_path(coach), params: { reason: "x", return_to: "/admin?status=approved" }
+    assert_redirected_to "/admin?status=approved"
+  end
+
+  test "action ignores an unsafe return_to" do
+    sign_in
+    coach = make_coach("Amy", "approved", "+201000000092")
+    post admin_suspend_coach_path(coach), params: { reason: "x", return_to: "https://evil.example/x" }
+    assert_redirected_to admin_coach_path(coach)
+    coach2 = make_coach("Bo", "approved", "+201000000093")
+    post admin_suspend_coach_path(coach2), params: { reason: "x", return_to: "//evil.example" }
+    assert_redirected_to admin_coach_path(coach2)
+  end
+
+  test "failed action flashes alert and returns to return_to" do
+    sign_in
+    coach = make_coach("Pat", "pending_review", "+201000000094")
+    post admin_approve_coach_path(coach), params: { commission: "", return_to: "/admin" }
+    assert_redirected_to "/admin"
+    assert flash[:alert].present?
   end
 end

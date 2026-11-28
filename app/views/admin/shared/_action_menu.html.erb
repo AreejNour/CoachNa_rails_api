@@ -1,0 +1,52 @@
+<%# Locals: actions (coach_actions / client_actions), record_id, return_to, trigger (:button | :dots), label (optional aria-label for :dots) %>
+<% if actions.empty? && trigger == :dots %>
+<% else %>
+  <details class="action-menu" id="action-menu-<%= record_id %>">
+    <% if trigger == :dots %>
+      <summary class="btn action-dots" aria-label="<%= local_assigns[:label] || "Actions" %>">⋯</summary>
+    <% else %>
+      <summary class="btn"><%= actions.empty? ? "Actions" : "Actions ▾" %></summary>
+    <% end %>
+    <div class="action-panel">
+      <% if actions.empty? %>
+        <p class="muted action-empty">No actions for this status</p>
+      <% end %>
+      <% actions.each do |action| %>
+        <% if action[:input] %>
+          <button type="button" class="action-item<%= ' danger' if action[:danger] %>"
+                  data-dialog="action-<%= record_id %>-<%= action[:key] %>"><%= action[:label] %></button>
+        <% else %>
+          <%= form_with url: action[:url], method: :post, class: "action-item-form",
+                html: (action[:confirm] ? { onsubmit: "return confirm(#{action[:confirm].to_json})" } : {}) do |f| %>
+            <%= hidden_field_tag :return_to, return_to, id: nil %>
+            <button type="submit" class="action-item<%= ' danger' if action[:danger] %>"><%= action[:label] %></button>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  </details>
+
+  <% actions.select { |a| a[:input] }.each do |action| %>
+    <dialog id="action-<%= record_id %>-<%= action[:key] %>" class="action-dialog" aria-labelledby="action-<%= record_id %>-<%= action[:key] %>-title"
+            data-menu="action-menu-<%= record_id %>">
+      <%= form_with url: action[:url], method: :post do |f| %>
+        <h3 id="action-<%= record_id %>-<%= action[:key] %>-title"><%= action[:label] %></h3>
+        <div class="form-row">
+          <% if action[:input] == :commission %>
+            <%= label_tag "action-#{record_id}-#{action[:key]}-field", "Commission (%)" %>
+            <%= number_field_tag :commission, nil, id: "action-#{record_id}-#{action[:key]}-field", step: "any", min: 0, max: 100, required: true %>
+          <% else %>
+            <%= label_tag "action-#{record_id}-#{action[:key]}-field", "Reason" %>
+            <%= text_area_tag :reason, nil, id: "action-#{record_id}-#{action[:key]}-field", required: true, rows: 4 %>
+          <% end %>
+        </div>
+        <% if action[:danger] %><p class="muted">This cannot be undone.</p><% end %>
+        <%= hidden_field_tag :return_to, return_to, id: nil %>
+        <div class="dialog-actions">
+          <button type="button" class="btn" data-close-dialog>Cancel</button>
+          <button type="submit" class="btn <%= action[:danger] ? 'danger' : 'primary' %>"><%= action[:label] %></button>
+        </div>
+      <% end %>
+    </dialog>
+  <% end %>
+<% end %>

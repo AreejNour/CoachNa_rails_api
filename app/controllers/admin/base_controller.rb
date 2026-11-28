@@ -17,6 +17,13 @@ module Admin
       @current_admin = session[:admin_id] && AdminUser.find_by(id: session[:admin_id])
     end
 
+    # An in-panel path to return to after an action; nil for anything else (no open redirects).
+    def safe_admin_return_to(value)
+      return nil unless value.is_a?(String)
+
+      value.start_with?("/admin") && !value.start_with?("//") ? value : nil
+    end
+
     def require_admin
       redirect_to admin_login_path unless current_admin
     end

@@ -86,7 +86,7 @@ module Admin
     rescue Admin::CoachDecision::Error => e
       flash[:alert] = e.message
     ensure
-      redirect_to admin_coach_path(coach)
+      redirect_to(safe_admin_return_to(params[:return_to]) || admin_coach_path(coach))
     end
   end
 end
