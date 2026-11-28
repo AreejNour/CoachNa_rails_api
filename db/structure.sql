@@ -285,7 +285,10 @@ CREATE TABLE public.coaches (
     average_rating numeric(2,1),
     review_count integer DEFAULT 0 NOT NULL,
     specialties jsonb DEFAULT '[]'::jsonb NOT NULL,
-    commission_percent numeric(5,2)
+    commission_percent numeric(5,2),
+    gender text,
+    date_of_birth date,
+    CONSTRAINT coaches_gender_check CHECK (((gender IS NULL) OR (gender = ANY (ARRAY['male'::text, 'female'::text]))))
 );
 
 

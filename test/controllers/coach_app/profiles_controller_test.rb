@@ -33,6 +33,35 @@ class CoachApp::ProfilesControllerTest < ActionDispatch::IntegrationTest
       [ @coach.full_name, @coach.email, @coach.bio, @coach.specialties, @coach.years_experience ]
   end
 
+  test "saves gender and date of birth and returns them, null when unset" do
+    patch_profile(bio: "Hi")
+    assert_nil returned["gender"]
+    assert_nil returned["dateOfBirth"]
+
+    patch_profile(gender: "female", dateOfBirth: "1990-03-12")
+
+    assert_response :ok
+    assert_equal [ "female", "1990-03-12" ], [ returned["gender"], returned["dateOfBirth"] ]
+    @coach.reload
+    assert_equal [ "female", Date.new(1990, 3, 12) ], [ @coach.gender, @coach.date_of_birth ]
+  end
+
+  test "refuses bad gender and date of birth values" do
+    [ { gender: "other" }, { gender: nil }, { dateOfBirth: "1990-02-30" }, { dateOfBirth: "12/03/1990" },
+      { dateOfBirth: 1990 }, { dateOfBirth: "1899-12-31" }, { dateOfBirth: 1.day.from_now.to_date.iso8601 },
+      { dateOfBirth: 17.years.ago.to_date.iso8601 } ].each do |body|
+      patch_profile(body)
+      assert_failure 400, "validation failed"
+    end
+  end
+
+  test "someone turning 18 today may save, turning 18 tomorrow may not" do
+    patch_profile(dateOfBirth: 18.years.ago.to_date.iso8601)
+    assert_response :ok
+    patch_profile(dateOfBirth: (18.years.ago.to_date + 1).iso8601)
+    assert_response :bad_request
+  end
+
   test "the response never contains the password hash or commission" do
     patch_profile(bio: "Hi")
 

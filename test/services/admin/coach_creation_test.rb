@@ -43,7 +43,8 @@ class Admin::CoachCreationTest < ActiveSupport::TestCase
     assert_not_nil coach.reviewed_at
     assert_not_nil coach.profile_submitted_at
     assert_equal 4, coach.coach_documents.count
-    assert_empty CoachApp::ReviewStatus.missing(coach, coach.coach_documents.to_a)
+    # "about" stays until the admin form takes gender and date of birth (a later task).
+    assert_equal [ "about" ], CoachApp::ReviewStatus.missing(coach, coach.coach_documents.to_a)
 
     change = coach.coach_status_changes.sole
     assert_equal [ "incomplete", "approved", "Created by admin", @admin.id ],
