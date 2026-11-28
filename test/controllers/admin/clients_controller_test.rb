@@ -214,4 +214,11 @@ class Admin::ClientsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes @response.body, "Replaced Coach"
     assert_not_includes @response.body, "Open Coach"
   end
+
+  test "suspend follows a safe return_to" do
+    sign_in
+    client = make_client("Ann Active", "active", "+201000000391")
+    post admin_suspend_client_path(client), params: { return_to: "/admin/clients?q=ann" }
+    assert_redirected_to "/admin/clients?q=ann"
+  end
 end

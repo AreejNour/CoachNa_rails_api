@@ -78,4 +78,35 @@ module AdminHelper
   def admin_nav_active?(section)
     controller_name == section.to_s
   end
+
+  # The admin actions available for a coach in its current status, for the shared action menu.
+  # Each: { key:, label:, url:, input: nil|:reason|:commission, danger:, confirm: }.
+  def coach_actions(coach)
+    act = lambda do |key, label, input, danger: false|
+      { key: key, label: label, url: send("admin_#{key}_coach_path", coach), input: input, danger: danger, confirm: nil }
+    end
+    case coach.status
+    when "pending_review"
+      [ act.(:approve, "Approve", :commission), act.(:request_changes, "Request changes", :reason), act.(:reject, "Reject", :reason) ]
+    when "approved"
+      [ act.(:suspend, "Suspend", :reason), act.(:deactivate, "Deactivate", :reason, danger: true) ]
+    when "suspended"
+      [ act.(:reactivate, "Reactivate", :reason), act.(:deactivate, "Deactivate", :reason, danger: true) ]
+    else
+      []
+    end
+  end
+
+  # The admin actions available for a client in its current status (none take input).
+  def client_actions(client)
+    act = lambda do |key, label, danger: false, confirm: nil|
+      { key: key, label: label, url: send("admin_#{key}_client_path", client), input: nil, danger: danger, confirm: confirm }
+    end
+    deactivate = act.(:deactivate, "Deactivate", danger: true, confirm: "Deactivate this client? This cannot be undone.")
+    case client.status
+    when "active" then [ act.(:suspend, "Suspend"), deactivate ]
+    when "suspended" then [ act.(:reactivate, "Reactivate"), deactivate ]
+    else []
+    end
+  end
 end

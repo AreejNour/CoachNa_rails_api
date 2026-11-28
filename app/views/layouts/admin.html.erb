@@ -157,6 +157,25 @@
     .doc-list{list-style:none;margin:0;padding:0}
     .doc-list li{padding:9px 0;border-bottom:1px solid var(--line)}
     .doc-list li:last-child{border-bottom:none}
+    /* action menu + input dialog */
+    .action-menu{position:relative;display:inline-block}
+    .action-menu>summary{list-style:none;cursor:pointer}
+    .action-menu>summary::-webkit-details-marker{display:none}
+    .action-panel{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:180px;
+         background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+         box-shadow:0 8px 24px rgba(16,24,40,.12);padding:6px}
+    .action-panel form{margin:0}
+    .action-item{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;
+         padding:8px 12px;font:inherit;font-weight:600;color:var(--ink);cursor:pointer}
+    .action-item:hover{background:#F3F5F4}
+    .action-item.danger{color:var(--danger)}
+    .action-item.danger:hover{background:var(--danger-bg)}
+    .action-empty{padding:8px 12px;margin:0}
+    .action-dialog{border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
+         padding:20px;width:min(440px,92vw);background:var(--card);color:var(--ink)}
+    .action-dialog::backdrop{background:rgba(16,24,40,.45)}
+    .action-dialog h3{margin:0 0 12px}
+    .dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
   </style>
 </head>
 <body>
@@ -201,5 +220,22 @@
     <% if flash[:alert] %><div class="flash alert" role="alert"><%= flash[:alert] %></div><% end %>
     <%= yield %>
   <% end %>
+  <script>
+    document.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-dialog]");
+      if (t) {
+        var menu = t.closest("details");
+        if (menu) menu.open = false;
+        var d = document.getElementById(t.getAttribute("data-dialog"));
+        if (d) d.showModal();
+        return;
+      }
+      var c = e.target.closest("[data-close-dialog]");
+      if (c) { c.closest("dialog").close(); return; }
+      document.querySelectorAll("details.action-menu[open]").forEach(function (m) {
+        if (!m.contains(e.target)) m.open = false;
+      });
+    });
+  </script>
 </body>
 </html>

@@ -352,4 +352,29 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     get admin_coach_path(coach, tab: "clients", page: "999")
     assert_response :ok
   end
+
+  test "action follows a safe return_to" do
+    sign_in
+    coach = make_coach("Amy", "approved", "+201000000091")
+    post admin_suspend_coach_path(coach), params: { reason: "x", return_to: "/admin?status=approved" }
+    assert_redirected_to "/admin?status=approved"
+  end
+
+  test "action ignores an unsafe return_to" do
+    sign_in
+    coach = make_coach("Amy", "approved", "+201000000092")
+    post admin_suspend_coach_path(coach), params: { reason: "x", return_to: "https://evil.example/x" }
+    assert_redirected_to admin_coach_path(coach)
+    coach2 = make_coach("Bo", "approved", "+201000000093")
+    post admin_suspend_coach_path(coach2), params: { reason: "x", return_to: "//evil.example" }
+    assert_redirected_to admin_coach_path(coach2)
+  end
+
+  test "failed action flashes alert and returns to return_to" do
+    sign_in
+    coach = make_coach("Pat", "pending_review", "+201000000094")
+    post admin_approve_coach_path(coach), params: { commission: "", return_to: "/admin" }
+    assert_redirected_to "/admin"
+    assert flash[:alert].present?
+  end
 end
