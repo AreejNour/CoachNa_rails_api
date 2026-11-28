@@ -105,4 +105,24 @@ class Admin::CoachCreationTest < ActiveSupport::TestCase
     assert_operator error.errors.size, :>=, 7
     assert_equal 0, Coach.count
   end
+
+  test "an unexpected failure logs the class and a truncated, scrubbed message" do
+    logged = StringIO.new
+    old = Rails.logger
+    Rails.logger = ActiveSupport::Logger.new(logged)
+    boom = RuntimeError.new("kaboom #{'$2a$04$' + 'a' * 50} #{'x' * 400}")
+    original = Admin::CoachCreation.method(:welcome!)
+    Admin::CoachCreation.define_singleton_method(:welcome!) { |_coach| raise boom }
+    begin
+      assert_raises(Admin::CoachCreation::Invalid) { Admin::CoachCreation.call(admin: @admin, params: params) }
+    ensure
+      Admin::CoachCreation.define_singleton_method(:welcome!, original)
+    end
+    line = logged.string.lines.find { |l| l.include?("[coach_creation] failed") }
+    assert_includes line, "RuntimeError: kaboom"
+    assert_not_includes line, "$2a$"
+    assert_operator line.length, :<, 320
+  ensure
+    Rails.logger = old
+  end
 end

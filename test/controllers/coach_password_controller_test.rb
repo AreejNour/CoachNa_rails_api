@@ -72,6 +72,40 @@ class CoachPasswordControllerTest < ActionDispatch::IntegrationTest
     CoachPasswordController.allow_forgery_protection = false
   end
 
+  test "pages send Referrer-Policy same-origin, not no-referrer, in header and meta" do
+    get "/coach-password/#{@token}"
+    assert_equal "same-origin", @response.headers["Referrer-Policy"]
+    assert_includes @response.body, '<meta name="referrer" content="same-origin">'
+    assert_not_includes @response.body, "no-referrer"
+  end
+
+  test "post with forgery protection on succeeds with a matching Origin and the page's token" do
+    CoachPasswordController.allow_forgery_protection = true
+    get "/coach-password/#{@token}"
+    csrf = css_select("input[name=authenticity_token]").first["value"]
+    post "/coach-password/#{@token}",
+         params: { authenticity_token: csrf, password: "newpass123", password_confirmation: "newpass123" },
+         headers: { "Origin" => "http://www.example.com" }
+    assert_response :ok
+    assert_includes @response.body, "Password saved"
+    assert CoachApp::Password.verify("newpass123", @coach.reload.password_hash)
+  ensure
+    CoachPasswordController.allow_forgery_protection = false
+  end
+
+  test "post with a null Origin is rejected when forgery protection is on" do
+    CoachPasswordController.allow_forgery_protection = true
+    get "/coach-password/#{@token}"
+    csrf = css_select("input[name=authenticity_token]").first["value"]
+    post "/coach-password/#{@token}",
+         params: { authenticity_token: csrf, password: "newpass123", password_confirmation: "newpass123" },
+         headers: { "Origin" => "null" }
+    assert_response :unprocessable_entity
+    assert_not CoachApp::Password.verify("newpass123", @coach.reload.password_hash)
+  ensure
+    CoachPasswordController.allow_forgery_protection = false
+  end
+
   test "admin pages still require a session" do
     get "/admin"
     assert_redirected_to "/admin/login"

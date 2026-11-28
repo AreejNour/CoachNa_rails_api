@@ -64,11 +64,17 @@ module Admin
         Invalid.new(error.message.include?("coaches_email_unique") ? "Email already registered." : "Phone already registered.")
       when ActiveRecord::RecordInvalid then Invalid.new(error.record.errors.full_messages)
       else
-        Rails.logger.error("[coach_creation] failed: #{error.class}")
+        Rails.logger.error("[coach_creation] failed: #{error.class}: #{log_safe(error.message)}")
         Invalid.new("Could not create the coach. Please try again.")
       end
     end
     private_class_method :translate
+
+    # A short, single-line message with anything secret-looking (password hashes, long tokens) removed.
+    def self.log_safe(message)
+      message.to_s.gsub(/\$2[abxy]?\$\S+/, "[hash]").gsub(/\S{40,}/, "[redacted]").gsub(/\s+/, " ")[0, 200]
+    end
+    private_class_method :log_safe
 
     def self.delete_file(key)
       Storage.current.delete(key)

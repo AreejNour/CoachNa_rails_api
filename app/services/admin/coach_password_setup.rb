@@ -9,8 +9,19 @@ module Admin
       verifier.generate([ coach.id, fingerprint(coach.password_hash) ], expires_in: EXPIRES_IN)
     end
 
+    DEV_URL_BASE = "http://localhost:3003".freeze
+
     def self.link_for(coach)
-      "#{ENV.fetch('COACH_PASSWORD_URL_BASE', 'http://localhost:3003')}/coach-password/#{token_for(coach)}"
+      "#{url_base}/coach-password/#{token_for(coach)}"
+    end
+
+    # The public origin of this app. Production must set it: a localhost link would be useless to a coach.
+    def self.url_base
+      value = ENV["COACH_PASSWORD_URL_BASE"].to_s.strip
+      return value.chomp("/") unless value.empty?
+      raise "COACH_PASSWORD_URL_BASE is not set" if Rails.env.production?
+
+      DEV_URL_BASE
     end
 
     # The coach the token belongs to, or nil if it is expired, tampered with or already used.
@@ -64,6 +75,7 @@ module Admin
     def self.fingerprint(password_hash)
       Digest::SHA256.hexdigest(password_hash.to_s)[0, 16]
     end
+    private_class_method :fingerprint
 
     def self.verifier
       Rails.application.message_verifier(PURPOSE)

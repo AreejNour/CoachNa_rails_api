@@ -53,6 +53,6 @@ class CoachPasswordController < ActionController::Base
 
   def no_store
     response.headers["Cache-Control"] = "no-store"
-    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Referrer-Policy"] = "same-origin"
   end
 end
