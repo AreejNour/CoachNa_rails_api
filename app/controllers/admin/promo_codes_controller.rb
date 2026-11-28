@@ -103,7 +103,8 @@ module Admin
         starts_at: cairo_time(p[:starts_at]),
         ends_at: cairo_time(p[:ends_at]),
         max_uses: p[:max_uses].presence,
-        max_uses_per_client: p[:max_uses_per_client].presence,
+        # Blank means no limit; a save that doesn't send the field keeps the current limit (1 on create).
+        max_uses_per_client: p.key?(:max_uses_per_client) ? p[:max_uses_per_client].presence : @code.max_uses_per_client,
         active: p[:active] == "1"
       }
       @code.persisted? ? attrs : attrs.merge(code: p[:code])

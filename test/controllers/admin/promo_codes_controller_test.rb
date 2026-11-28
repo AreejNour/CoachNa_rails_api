@@ -348,6 +348,18 @@ class Admin::PromoCodesControllerTest < ActionDispatch::IntegrationTest
     assert_nil PromoCode.find_by!(code: "NOLIMIT").max_uses_per_client
   end
 
+  test "a save that leaves out uses per patient keeps the limit (1 on create)" do
+    sign_in
+    post admin_promo_codes_path, params: form_params(code: "NOFIELD")
+    assert_equal 1, PromoCode.find_by!(code: "NOFIELD").max_uses_per_client
+    code = make_code(max_uses_per_client: 2)
+    patch admin_promo_code_path(code), params: form_params(value: "40")
+    assert_equal 40, code.reload.value
+    assert_equal 2, code.max_uses_per_client
+    patch admin_promo_code_path(code), params: form_params(value: "40", max_uses_per_client: "")
+    assert_nil code.reload.max_uses_per_client
+  end
+
   test "new and edit show the uses per patient value" do
     sign_in
     get new_admin_promo_code_path
