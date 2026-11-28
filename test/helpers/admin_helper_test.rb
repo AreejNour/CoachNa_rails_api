@@ -18,6 +18,16 @@ class AdminHelperTest < ActionView::TestCase
     assert_equal [], coach_actions(coach("rejected"))
   end
 
+  test "coach_actions offers a set-password email only for approved or suspended coaches with an email" do
+    with_email = Coach.new(id: SecureRandom.uuid, status: "approved", email: "a@example.com")
+    item = coach_actions(with_email).find { |x| x[:key] == :send_password_email }
+    assert_equal "Send set-password email", item[:label]
+    assert_nil item[:input]
+    assert_includes coach_actions(Coach.new(id: SecureRandom.uuid, status: "suspended", email: "a@example.com")).map { |x| x[:key] }, :send_password_email
+    assert_not_includes coach_actions(coach("approved")).map { |x| x[:key] }, :send_password_email
+    assert_not_includes coach_actions(Coach.new(id: SecureRandom.uuid, status: "rejected", email: "a@example.com")).map { |x| x[:key] }, :send_password_email
+  end
+
   test "coach deactivate is danger" do
     d = coach_actions(coach("approved")).find { |x| x[:key] == :deactivate }
     assert d[:danger]

@@ -473,4 +473,40 @@ class Admin::CoachesControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, "National id back"
     assert_equal 0, Coach.count
   end
+
+  test "send_password_email queues the email and honours return_to" do
+    CoachApp::QueuePublisher.adapter = CoachApp::QueuePublisher::TestAdapter.new
+    sign_in
+    coach = make_coach("Amy", "approved", "+201000000099")
+    coach.update!(email: "amy@example.com")
+    post "/admin/coaches/#{coach.id}/send-password-email", params: { return_to: "/admin?status=approved" }
+    assert_redirected_to "/admin?status=approved"
+    assert_equal "Set-password email sent.", flash[:notice]
+    payload = OutboxMessage.where(kind: "email").sole.payload
+    assert_equal "coach_account_created", payload["template"]
+    assert payload["data"]["link"].present?
+  ensure
+    CoachApp::QueuePublisher.adapter = nil
+  end
+
+  test "send_password_email for a coach without email only alerts" do
+    sign_in
+    coach = make_coach("Amy", "approved", "+201000000098")
+    post "/admin/coaches/#{coach.id}/send-password-email"
+    assert_redirected_to "/admin/coaches/#{coach.id}"
+    assert flash[:alert].present?
+    assert_equal 0, OutboxMessage.where(kind: "email").count
+  end
+
+  test "send_password_email requires an admin" do
+    coach = make_coach("Amy", "approved", "+201000000097")
+    post "/admin/coaches/#{coach.id}/send-password-email"
+    assert_redirected_to "/admin/login"
+  end
+
+  test "create ignores a non-hash coach param" do
+    sign_in
+    post "/admin/coaches", params: { coach: "foo" }
+    assert_response :unprocessable_entity
+  end
 end

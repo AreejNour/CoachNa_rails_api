@@ -1,6 +1,9 @@
 Rails.application.routes.draw do
   get "/health", to: "health#show"
 
+  get "coach-password/:token", to: "coach_password#edit", as: :coach_password
+  post "coach-password/:token", to: "coach_password#update"
+
   scope path: "coach", module: "coach_app" do
     get "auth/countries", to: "countries#index"
     post "auth/signup/request-otp", to: "signups#request_otp"
@@ -71,6 +74,7 @@ Rails.application.routes.draw do
     post "coaches/:id/suspend", to: "coaches#suspend", as: :suspend_coach
     post "coaches/:id/reactivate", to: "coaches#reactivate", as: :reactivate_coach
     post "coaches/:id/deactivate", to: "coaches#deactivate", as: :deactivate_coach
+    post "coaches/:id/send-password-email", to: "coaches#send_password_email", as: :send_password_email_coach
     get "reviews", to: "reviews#index", as: :reviews
     get "reviews/:id", to: "reviews#show", as: :review
     get "reviews/:id/photos/:photo_id", to: "reviews#photo", as: :review_photo

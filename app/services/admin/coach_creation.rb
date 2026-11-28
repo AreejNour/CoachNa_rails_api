@@ -26,17 +26,13 @@ module Admin
 
     # Queues the welcome email. A coach without an email or a link would get a broken message.
     def self.welcome!(coach)
-      link = CoachPasswordSetup.link_for(coach)
-      data = { firstName: coach.full_name.to_s.split.first, link: link }
-      CoachApp::Outbox.enqueue_and_publish_after_commit!(
-        kind: "email", payload: { to: coach.email, template: "coach_account_created", data: data }
-      )
+      CoachPasswordSetup.send_email!(coach)
     end
 
     def self.create!(admin, attrs, files)
       stored_keys = []
       begin
-        coach = Coach.transaction do
+        created = Coach.transaction do
           coach = Coach.create!(
             attrs.merge(status: "incomplete", phone_verified_at: Time.current,
                         password_hash: CoachApp::Password.digest(SecureRandom.hex(32)))
@@ -52,11 +48,11 @@ module Admin
           welcome!(coach)
           coach
         end
-        coach.reload
       rescue StandardError => error
         stored_keys.each { |key| delete_file(key) }
         raise translate(error)
       end
+      created.reload
     end
     private_class_method :create!
 

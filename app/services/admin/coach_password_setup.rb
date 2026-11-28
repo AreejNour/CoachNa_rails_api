@@ -13,6 +13,48 @@ module Admin
       "#{ENV.fetch('COACH_PASSWORD_URL_BASE', 'http://localhost:3003')}/coach-password/#{token_for(coach)}"
     end
 
+    # The coach the token belongs to, or nil if it is expired, tampered with or already used.
+    def self.verify(token)
+      id, print = verifier.verified(token.to_s)
+      return nil unless id.is_a?(String) && print.is_a?(String)
+
+      coach = Coach.find_by(id: id)
+      coach if coach && matches?(coach, print)
+    end
+
+    # Sets the password once: the row is locked and the token re-checked, so two submits of one
+    # link cannot both succeed. Returns the coach, or nil when the token is no longer valid.
+    def self.set_password!(token, password, confirmation)
+      CoachApp::Input.password(password)
+      raise ArgumentError, "passwords do not match" unless password == confirmation
+
+      id, print = verifier.verified(token.to_s)
+      return nil unless id.is_a?(String) && print.is_a?(String)
+
+      Coach.transaction do
+        coach = Coach.lock.find_by(id: id)
+        next nil unless coach && matches?(coach, print)
+
+        coach.update!(password_hash: CoachApp::Password.digest(password))
+        coach
+      end
+    end
+
+    # Queues the set-password email for an existing coach.
+    def self.send_email!(coach)
+      raise ArgumentError, "coach has no email" if coach.email.blank?
+
+      data = { firstName: coach.full_name.to_s.split.first, link: link_for(coach) }
+      CoachApp::Outbox.enqueue_and_publish_after_commit!(
+        kind: "email", payload: { to: coach.email, template: "coach_account_created", data: data }
+      )
+    end
+
+    def self.matches?(coach, print)
+      ActiveSupport::SecurityUtils.secure_compare(fingerprint(coach.password_hash), print)
+    end
+    private_class_method :matches?
+
     def self.fingerprint(password_hash)
       Digest::SHA256.hexdigest(password_hash.to_s)[0, 16]
     end
